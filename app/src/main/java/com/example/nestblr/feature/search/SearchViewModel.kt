@@ -18,7 +18,8 @@ data class SearchUiState(
     val error: String? = null,
     val centerLat: Double = 12.9352,  // Default: Koramangala
     val centerLng: Double = 77.6245,
-    val radiusKm: Double = 5.0
+    val radiusKm: Double = 5.0,
+    val filters: FilterState = FilterState()
 )
 
 @HiltViewModel
@@ -36,10 +37,16 @@ class SearchViewModel @Inject constructor(
     fun load() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
+            val f = _state.value.filters
             val result = repo.searchNearby(
                 lat = _state.value.centerLat,
                 lng = _state.value.centerLng,
-                radiusKm = _state.value.radiusKm
+                radiusKm = _state.value.radiusKm,
+                gender = f.gender,
+                food = f.food,
+                pgType = f.pgType,
+                minRent = if (f.minRent != FilterState.MIN_RENT) f.minRent else null,
+                maxRent = if (f.maxRent != FilterState.MAX_RENT) f.maxRent else null
             )
             result.fold(
                 onSuccess = { listings ->
@@ -56,8 +63,12 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    fun setRadius(km: Double) {
-        _state.update { it.copy(radiusKm = km) }
+    fun applyFilters(filters: FilterState) {
+        _state.update { it.copy(filters = filters) }
         load()
+    }
+
+    fun clearFilters() {
+        applyFilters(FilterState())
     }
 }

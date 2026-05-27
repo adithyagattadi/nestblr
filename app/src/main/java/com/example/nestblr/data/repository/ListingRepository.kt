@@ -16,16 +16,20 @@ class ListingRepository @Inject constructor(
         lng: Double,
         radiusKm: Double = 5.0,
         gender: String? = null,
-        maxRent: Int? = null,
-        pgType: String? = null
+        food: String? = null,
+        pgType: String? = null,
+        minRent: Int? = null,
+        maxRent: Int? = null
     ): Result<List<ListingSummary>> = runCatching {
         api.searchListings(
             lat = lat,
             lng = lng,
             radiusKm = radiusKm,
             gender = gender,
-            maxRent = maxRent,
-            pgType = pgType
+            food = food,
+            pgType = pgType,
+            minRent = minRent,
+            maxRent = maxRent
         ).data.map { it.toDomain() }
     }
 

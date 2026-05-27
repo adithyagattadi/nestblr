@@ -1,5 +1,6 @@
 package com.example.nestblr.feature.search
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,6 +26,7 @@ import com.example.nestblr.domain.model.PgType
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
+    onListingClick: (String) -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -73,7 +75,10 @@ fun SearchScreen(
                             )
                         }
                         items(state.listings, key = { it.id }) { listing ->
-                            ListingCard(listing)
+                            ListingCard(
+                                listing = listing,
+                                onClick = { onListingClick(listing.id) }
+                            )
                         }
                     }
                 }
@@ -83,13 +88,17 @@ fun SearchScreen(
 }
 
 @Composable
-private fun ListingCard(listing: ListingSummary) {
+private fun ListingCard(
+    listing: ListingSummary,
+    onClick: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Cover image placeholder
             if (listing.coverPhotoUrl != null) {
                 AsyncImage(
                     model = listing.coverPhotoUrl,

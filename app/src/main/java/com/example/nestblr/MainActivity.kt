@@ -6,9 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.example.nestblr.feature.search.SearchScreen
+import com.example.nestblr.core.navigation.NestBlrNavHost
 import com.example.nestblr.ui.theme.NestBLRTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -20,7 +19,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             NestBLRTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    SearchScreen()
+                    NestBlrNavHost()
                 }
             }
         }

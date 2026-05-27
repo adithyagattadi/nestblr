@@ -1,6 +1,7 @@
 package com.example.nestblr.data.repository
 
 import com.example.nestblr.data.remote.NestBlrApi
+import com.example.nestblr.domain.model.ListingDetail
 import com.example.nestblr.domain.model.ListingSummary
 import com.example.nestblr.domain.model.toDomain
 import javax.inject.Inject
@@ -26,5 +27,9 @@ class ListingRepository @Inject constructor(
             maxRent = maxRent,
             pgType = pgType
         ).data.map { it.toDomain() }
+    }
+
+    suspend fun getById(id: String): Result<ListingDetail> = runCatching {
+        api.getListingById(id).data.toDomain()
     }
 }

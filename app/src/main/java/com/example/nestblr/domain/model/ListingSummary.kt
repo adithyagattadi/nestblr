@@ -1,8 +1,5 @@
 package com.example.nestblr.domain.model
 
-class ListingSummary {
-}package com.example.nestblr.domain.model
-
 import com.example.nestblr.data.remote.dto.ListingSummaryDto
 
 /**

@@ -14,6 +14,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.nestblr.ui.theme.Poppins
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,12 +39,14 @@ fun AuthScreen(
         Text(
             "NestBLR",
             style = MaterialTheme.typography.displaySmall,
+            fontFamily = Poppins,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
         Text(
             "Find PGs in Bengaluru",
             style = MaterialTheme.typography.bodyLarge,
+            fontFamily = Poppins,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
@@ -52,6 +55,7 @@ fun AuthScreen(
         Text(
             if (state.mode == AuthMode.LOGIN) "Welcome back" else "Create account",
             style = MaterialTheme.typography.headlineSmall,
+            fontFamily = Poppins,
             fontWeight = FontWeight.SemiBold
         )
 

@@ -1,174 +1,320 @@
 package com.example.nestblr.feature.owner
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.nestblr.data.remote.dto.CreateListingRequest
-import com.example.nestblr.data.remote.dto.CreateRoomOptionRequest
-import com.example.nestblr.data.repository.OwnerRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import javax.inject.Inject
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 
-/** A room option row in the form (strings for text-field binding). */
-data class RoomOptionForm(
-    val sharingType: String = "SINGLE",
-    val monthlyRent: String = "",
-    val securityDeposit: String = "",
-    val totalBeds: String = "",
-    val availableBeds: String = ""
-)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun CreateListingScreen(
+    onBack: () -> Unit,
+    onCreated: () -> Unit,
+    viewModel: CreateListingViewModel = hiltViewModel()
+) {
+    val state by viewModel.state.collectAsState()
 
-/**
- * Bengaluru localities with approximate center coordinates.
- * Temporary stand-in for the map pin picker — owner picks a locality,
- * we use its centroid. Later replaced by an exact map pin.
- */
-enum class Locality(val displayName: String, val lat: Double, val lng: Double) {
-    KORAMANGALA("Koramangala", 12.9352, 77.6245),
-    HSR_LAYOUT("HSR Layout", 12.9116, 77.6412),
-    BTM_LAYOUT("BTM Layout", 12.9165, 77.6101),
-    INDIRANAGAR("Indiranagar", 12.9716, 77.6412),
-    JAYANAGAR("Jayanagar", 12.9250, 77.5938),
-    WHITEFIELD("Whitefield", 12.9698, 77.7500),
-    MARATHAHALLI("Marathahalli", 12.9591, 77.6974),
-    BELLANDUR("Bellandur", 12.9259, 77.6649),
-    ELECTRONIC_CITY("Electronic City", 12.8452, 77.6602),
-    JP_NAGAR("JP Nagar", 12.9077, 77.5853),
-    SARJAPUR("Sarjapur Road", 12.9010, 77.6870)
-}
-
-data class CreateListingState(
-    val title: String = "",
-    val description: String = "",
-    val addressLine: String = "",
-    val locality: Locality = Locality.KORAMANGALA,
-    val pincode: String = "",
-    val genderPreference: String = "COED",
-    val pgType: String = "PG",
-    val foodType: String = "BOTH",
-    val rooms: List<RoomOptionForm> = listOf(RoomOptionForm()),
-    val selectedAmenityIds: Set<Int> = emptySet(),
-    val isSubmitting: Boolean = false,
-    val error: String? = null,
-    val createdId: String? = null   // non-null = success, triggers navigation back
-)
-
-/** Amenities — must match the seeded amenity IDs in the backend (01_schema.sql order). */
-val AMENITIES: List<Pair<Int, String>> = listOf(
-    1 to "WiFi",
-    2 to "AC",
-    3 to "Laundry",
-    4 to "Parking",
-    5 to "Power Backup",
-    6 to "CCTV",
-    7 to "Hot Water",
-    8 to "Refrigerator",
-    9 to "Housekeeping",
-    10 to "TV",
-    11 to "Gym",
-    12 to "Food Included"
-)
-
-@HiltViewModel
-class CreateListingViewModel @Inject constructor(
-    private val repo: OwnerRepository
-) : ViewModel() {
-
-    private val _state = MutableStateFlow(CreateListingState())
-    val state: StateFlow<CreateListingState> = _state.asStateFlow()
-
-    fun onTitle(v: String) = _state.update { it.copy(title = v, error = null) }
-    fun onDescription(v: String) = _state.update { it.copy(description = v) }
-    fun onAddress(v: String) = _state.update { it.copy(addressLine = v, error = null) }
-    fun onLocality(v: Locality) = _state.update { it.copy(locality = v) }
-    fun onPincode(v: String) = _state.update { it.copy(pincode = v) }
-    fun onGender(v: String) = _state.update { it.copy(genderPreference = v) }
-    fun onPgType(v: String) = _state.update { it.copy(pgType = v) }
-    fun onFoodType(v: String) = _state.update { it.copy(foodType = v) }
-
-    fun toggleAmenity(id: Int) = _state.update {
-        val next = it.selectedAmenityIds.toMutableSet()
-        if (id in next) next.remove(id) else next.add(id)
-        it.copy(selectedAmenityIds = next)
+    LaunchedEffect(state.createdId) {
+        if (state.createdId != null) onCreated()
     }
 
-    fun addRoom() = _state.update { it.copy(rooms = it.rooms + RoomOptionForm()) }
-
-    fun removeRoom(index: Int) = _state.update {
-        if (it.rooms.size <= 1) it  // keep at least one
-        else it.copy(rooms = it.rooms.filterIndexed { i, _ -> i != index })
-    }
-
-    fun updateRoom(index: Int, room: RoomOptionForm) = _state.update {
-        it.copy(rooms = it.rooms.mapIndexed { i, r -> if (i == index) room else r })
-    }
-
-    fun submit() {
-        val s = _state.value
-
-        // Validation
-        if (s.title.isBlank()) {
-            _state.update { it.copy(error = "Title is required") }; return
-        }
-        if (s.addressLine.isBlank()) {
-            _state.update { it.copy(error = "Address is required") }; return
-        }
-        val parsedRooms = mutableListOf<CreateRoomOptionRequest>()
-        for ((idx, room) in s.rooms.withIndex()) {
-            val rent = room.monthlyRent.toIntOrNull()
-            val deposit = room.securityDeposit.toIntOrNull()
-            val total = room.totalBeds.toIntOrNull()
-            val available = room.availableBeds.toIntOrNull()
-            if (rent == null || rent <= 0) {
-                _state.update { it.copy(error = "Room ${idx + 1}: enter a valid rent") }; return
-            }
-            if (deposit == null || deposit < 0) {
-                _state.update { it.copy(error = "Room ${idx + 1}: enter a valid deposit") }; return
-            }
-            if (total == null || total <= 0) {
-                _state.update { it.copy(error = "Room ${idx + 1}: enter total beds") }; return
-            }
-            if (available == null || available < 0 || available > total) {
-                _state.update { it.copy(error = "Room ${idx + 1}: available beds can't exceed total") }; return
-            }
-            parsedRooms.add(
-                CreateRoomOptionRequest(
-                    sharingType = room.sharingType,
-                    monthlyRent = rent,
-                    securityDeposit = deposit,
-                    totalBeds = total,
-                    availableBeds = available
-                )
-            )
-        }
-
-        val req = CreateListingRequest(
-            title = s.title.trim(),
-            description = s.description.trim().ifBlank { null },
-            addressLine = s.addressLine.trim(),
-            locality = s.locality.displayName,
-            pincode = s.pincode.trim().ifBlank { null },
-            latitude = s.locality.lat,
-            longitude = s.locality.lng,
-            genderPreference = s.genderPreference,
-            pgType = s.pgType,
-            foodType = s.foodType,
-            roomOptions = parsedRooms,
-            amenityIds = s.selectedAmenityIds.toList()
-        )
-
-        viewModelScope.launch {
-            _state.update { it.copy(isSubmitting = true, error = null) }
-            repo.createListing(req).fold(
-                onSuccess = { id -> _state.update { it.copy(isSubmitting = false, createdId = id) } },
-                onFailure = { e ->
-                    _state.update { it.copy(isSubmitting = false, error = e.message ?: "Failed to create listing") }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Create listing") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
                 }
             )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Basics
+            SectionTitle("Basics")
+            OutlinedTextField(
+                value = state.title,
+                onValueChange = viewModel::onTitle,
+                label = { Text("Title *") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = state.description,
+                onValueChange = viewModel::onDescription,
+                label = { Text("Description") },
+                minLines = 2,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Location
+            SectionTitle("Location")
+            LocalityDropdown(
+                selected = state.locality,
+                onSelect = viewModel::onLocality
+            )
+            OutlinedTextField(
+                value = state.addressLine,
+                onValueChange = viewModel::onAddress,
+                label = { Text("Address line *") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = state.pincode,
+                onValueChange = viewModel::onPincode,
+                label = { Text("Pincode") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = state.contactPhone,
+                onValueChange = { viewModel.onContactPhone(it.filter { c -> c.isDigit() || c == '+' }) },
+                label = { Text("Contact phone *") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                supportingText = { Text("Tenants will call this number") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                "Location is approximate (locality centroid). A map pin picker comes later.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            // Preferences
+            SectionTitle("Preferences")
+            LabeledChips("For", listOf("MALE" to "Men", "FEMALE" to "Women", "COED" to "Co-ed"),
+                state.genderPreference, viewModel::onGender)
+            LabeledChips("Type", listOf("PG" to "PG", "HOSTEL" to "Hostel", "COLIVING" to "Coliving"),
+                state.pgType, viewModel::onPgType)
+            LabeledChips("Food", listOf("VEG" to "Veg", "NON_VEG" to "Non-veg", "BOTH" to "Both", "NONE" to "None"),
+                state.foodType, viewModel::onFoodType)
+
+            // Rooms
+            SectionTitle("Room options")
+            state.rooms.forEachIndexed { index, room ->
+                RoomOptionEditor(
+                    index = index,
+                    room = room,
+                    canRemove = state.rooms.size > 1,
+                    onChange = { viewModel.updateRoom(index, it) },
+                    onRemove = { viewModel.removeRoom(index) }
+                )
+            }
+            OutlinedButton(
+                onClick = viewModel::addRoom,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("+ Add another room type") }
+
+            // Amenities
+            SectionTitle("Amenities")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AMENITIES.forEach { (id, name) ->
+                    FilterChip(
+                        selected = id in state.selectedAmenityIds,
+                        onClick = { viewModel.toggleAmenity(id) },
+                        label = { Text(name) }
+                    )
+                }
+            }
+
+            // Error
+            state.error?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+            }
+
+            // Submit
+            Button(
+                onClick = viewModel::submit,
+                enabled = !state.isSubmitting,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (state.isSubmitting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Create listing")
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LocalityDropdown(
+    selected: Locality,
+    onSelect: (Locality) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it }
+    ) {
+        OutlinedTextField(
+            value = selected.displayName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Locality *") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            Locality.entries.forEach { loc ->
+                DropdownMenuItem(
+                    text = { Text(loc.displayName) },
+                    onClick = {
+                        onSelect(loc)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LabeledChips(
+    label: String,
+    options: List<Pair<String, String>>,
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    Column {
+        Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.height(4.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            options.forEach { (value, text) ->
+                FilterChip(
+                    selected = selected == value,
+                    onClick = { onSelect(value) },
+                    label = { Text(text) }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RoomOptionEditor(
+    index: Int,
+    room: RoomOptionForm,
+    canRemove: Boolean,
+    onChange: (RoomOptionForm) -> Unit,
+    onRemove: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Room ${index + 1}",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                if (canRemove) {
+                    IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Remove room", modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+
+            // Sharing type chips
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("SINGLE", "DOUBLE", "TRIPLE", "QUAD").forEach { type ->
+                    FilterChip(
+                        selected = room.sharingType == type,
+                        onClick = { onChange(room.copy(sharingType = type)) },
+                        label = { Text(type.lowercase().replaceFirstChar { it.uppercase() }) }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = room.monthlyRent,
+                    onValueChange = { onChange(room.copy(monthlyRent = it.filter { c -> c.isDigit() })) },
+                    label = { Text("Rent ₹") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = room.securityDeposit,
+                    onValueChange = { onChange(room.copy(securityDeposit = it.filter { c -> c.isDigit() })) },
+                    label = { Text("Deposit ₹") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = room.totalBeds,
+                    onValueChange = { onChange(room.copy(totalBeds = it.filter { c -> c.isDigit() })) },
+                    label = { Text("Total beds") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = room.availableBeds,
+                    onValueChange = { onChange(room.copy(availableBeds = it.filter { c -> c.isDigit() })) },
+                    label = { Text("Available") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }

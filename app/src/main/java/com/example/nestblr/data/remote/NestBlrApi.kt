@@ -1,13 +1,18 @@
 package com.example.nestblr.data.remote
 
 import com.example.nestblr.data.remote.dto.ApiResponse
+import com.example.nestblr.data.remote.dto.CreateListingRequest
+import com.example.nestblr.data.remote.dto.CreatedIdDto
 import com.example.nestblr.data.remote.dto.ListingDetailDto
 import com.example.nestblr.data.remote.dto.ListingSummaryDto
+import com.example.nestblr.data.remote.dto.OwnerListingDto
 import com.example.nestblr.data.remote.dto.RegisterRequest
 import com.example.nestblr.data.remote.dto.UserDto
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -39,4 +44,24 @@ interface NestBlrApi {
 
     @GET("api/v1/auth/me")
     suspend fun getMe(): ApiResponse<UserDto>
+
+    // ── Owner endpoints ──
+    @GET("api/v1/owner/listings")
+    suspend fun getMyListings(): ApiResponse<List<OwnerListingDto>>
+
+    @POST("api/v1/owner/listings")
+    suspend fun createListing(
+        @Body body: CreateListingRequest
+    ): ApiResponse<CreatedIdDto>
+
+    @PUT("api/v1/owner/listings/{id}")
+    suspend fun updateListing(
+        @Path("id") id: String,
+        @Body body: CreateListingRequest
+    ): ApiResponse<CreatedIdDto>
+
+    @DELETE("api/v1/owner/listings/{id}")
+    suspend fun deleteListing(
+        @Path("id") id: String
+    ): ApiResponse<Map<String, String>>
 }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
@@ -29,6 +30,7 @@ import com.example.nestblr.domain.model.PgType
 @Composable
 fun SearchScreen(
     onListingClick: (String) -> Unit,
+    onSignOut: () -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -50,6 +52,9 @@ fun SearchScreen(
                         IconButton(onClick = { showFilters = true }) {
                             Icon(Icons.Default.Tune, contentDescription = "Filters")
                         }
+                    }
+                    IconButton(onClick = onSignOut) {
+                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Sign out")
                     }
                 }
             )

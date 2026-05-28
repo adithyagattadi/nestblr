@@ -46,9 +46,17 @@ fun NestBlrNavHost(
         }
 
         composable<Route.Search> {
+            // Get AuthViewModel scoped to this entry for sign-out
+            val authViewModel: AuthViewModel = hiltViewModel()
             SearchScreen(
                 onListingClick = { listingId ->
                     navController.navigate(Route.Detail(listingId))
+                },
+                onSignOut = {
+                    authViewModel.signOut()
+                    navController.navigate(Route.Auth) {
+                        popUpTo(0) { inclusive = true }  // clear entire back stack
+                    }
                 }
             )
         }

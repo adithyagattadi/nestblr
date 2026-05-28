@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "827447676656",
+    "project_id": "nestblr",
+    "storage_bucket": "nestblr.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:827447676656:android:845c668a5848b5d633fc35",
+        "android_client_info": {
+          "package_name": "com.example.nestblr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDp3AsOoh-YZ-BxhWsIQd3iRRTYfv2-7EA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

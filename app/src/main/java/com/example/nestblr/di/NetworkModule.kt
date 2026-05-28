@@ -1,6 +1,7 @@
 package com.example.nestblr.di
 
 import com.example.nestblr.BuildConfig
+import com.example.nestblr.data.remote.AuthInterceptor
 import com.example.nestblr.data.remote.NestBlrApi
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
@@ -28,12 +29,13 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
             else HttpLoggingInterceptor.Level.NONE
         }
         return OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)   // attaches Firebase token
             .addInterceptor(logging)
             .build()
     }

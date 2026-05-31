@@ -1,54 +1,79 @@
 package com.example.nestblr.ui.theme
 
-import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+private val LightColors = lightColorScheme(
+    primary = Rose600,
+    onPrimary = White,
+    primaryContainer = Rose100,
+    onPrimaryContainer = Rose900,
+
+    secondary = Teal700,
+    onSecondary = White,
+    secondaryContainer = Teal100,
+    onSecondaryContainer = Teal900,
+
+    tertiary = Amber500,
+    onTertiary = White,
+    tertiaryContainer = Amber100,
+    onTertiaryContainer = Amber900,
+
+    background = Gray50,
+    onBackground = Gray900,
+    surface = White,
+    onSurface = Gray900,
+    surfaceVariant = Gray100,
+    onSurfaceVariant = Gray500,
+
+    outline = Gray200,
+    outlineVariant = Gray100,
+
+    error = Red600,
+    onError = White,
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+private val DarkColors = darkColorScheme(
+    primary = Rose400,
+    onPrimary = White,
+    primaryContainer = Rose900,
+    onPrimaryContainer = Rose100,
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    secondary = Teal400,
+    onSecondary = Neutral950,
+    secondaryContainer = Teal900,
+    onSecondaryContainer = Teal100,
+
+    tertiary = Amber300,
+    onTertiary = Neutral950,
+    tertiaryContainer = Amber900,
+    onTertiaryContainer = Amber100,
+
+    background = Neutral950,
+    onBackground = Gray100,
+    surface = Neutral900,
+    onSurface = Gray100,
+    surfaceVariant = Neutral800,
+    onSurfaceVariant = Gray500,
+
+    outline = Neutral700,
+    outlineVariant = Neutral800,
+
+    error = Red400,
+    onError = Neutral950,
 )
 
 @Composable
 fun NestBLRTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Brand colors win over Material You.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val colorScheme = if (darkTheme) DarkColors else LightColors
 
     MaterialTheme(
         colorScheme = colorScheme,

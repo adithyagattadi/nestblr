@@ -1,9 +1,7 @@
 package com.example.nestblr.feature.detail
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -27,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -47,6 +46,7 @@ fun DetailScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
+    val context = LocalContext.current
     Scaffold(
         topBar = {
             TopAppBar(
@@ -57,6 +57,18 @@ fun DetailScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            state.detail?.let { d ->
+                BottomCtaBar(
+                    minRent = d.roomOptions.minOfOrNull { it.monthlyRent },
+                    phone = d.owner.phone,
+                    onCall = {
+                        val intent = Intent(Intent.ACTION_DIAL, "tel:${d.owner.phone}".toUri())
+                        context.startActivity(intent)
+                    }
+                )
+            }
         }
     ) { padding ->
         Box(
@@ -78,6 +90,65 @@ fun DetailScreen(
 }
 
 @Composable
+private fun BottomCtaBar(
+    minRent: Int?,
+    phone: String,
+    onCall: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 12.dp,
+        tonalElevation = 2.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                if (minRent != null) {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            "₹${"%,d".format(minRent)}",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            " /month",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 3.dp)
+                        )
+                    }
+                    Text(
+                        "starting price",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        phone,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+            Button(
+                onClick = onCall,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.height(52.dp)
+            ) {
+                Icon(Icons.Default.Call, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Call owner", style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    }
+}
+
+@Composable
 private fun DetailContent(detail: ListingDetail) {
     Column(
         modifier = Modifier
@@ -91,9 +162,9 @@ private fun DetailContent(detail: ListingDetail) {
             Text(
                 detail.title,
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Default.LocationOn,
@@ -109,7 +180,7 @@ private fun DetailContent(detail: ListingDetail) {
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
 
             // Rating
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -117,15 +188,17 @@ private fun DetailContent(detail: ListingDetail) {
                     Icons.Default.Star,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.tertiary
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    "${detail.avgRating}",
-                    fontWeight = FontWeight.SemiBold
+                    "%.1f".format(detail.avgRating),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     " · ${detail.reviewCount} reviews",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -193,12 +266,13 @@ private fun PhotoCarousel(urls: List<String>) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp)
+                .height(260.dp)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 "No photos available",
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -206,11 +280,12 @@ private fun PhotoCarousel(urls: List<String>) {
     }
 
     val pagerState = rememberPagerState(pageCount = { urls.size })
-    Box(modifier = Modifier.fillMaxWidth().height(240.dp)) {
+    Box(modifier = Modifier.fillMaxWidth().height(260.dp)) {
         HorizontalPager(state = pagerState) { page ->
             AsyncImage(
                 model = urls[page],
                 contentDescription = "Photo ${page + 1}",
+                contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -240,9 +315,9 @@ private fun PhotoCarousel(urls: List<String>) {
 private fun SectionHeader(text: String) {
     Text(
         text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(vertical = 8.dp)
+        style = MaterialTheme.typography.titleLarge,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
     )
 }
 
@@ -250,7 +325,12 @@ private fun SectionHeader(text: String) {
 private fun RoomOptionCard(room: RoomOption) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, MaterialTheme.colorScheme.outline
+        )
     ) {
         Row(
             modifier = Modifier
@@ -261,25 +341,29 @@ private fun RoomOptionCard(room: RoomOption) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     room.sharingType.name.replaceFirstChar { it.uppercase() } + " sharing",
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
-                    "Deposit: ₹${"%,d".format(room.securityDeposit)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    "${room.availableBeds}/${room.totalBeds} beds available",
+                    "Deposit ₹${"%,d".format(room.securityDeposit)} · ${room.availableBeds}/${room.totalBeds} beds available",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Text(
-                "₹${"%,d".format(room.monthlyRent)}/mo",
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    "₹${"%,d".format(room.monthlyRent)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    "/month",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -293,18 +377,13 @@ private fun AmenitiesGrid(amenities: List<Amenity>) {
         items(amenities, key = { it.id }) { amenity ->
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                modifier = Modifier.border(
-                    1.dp,
-                    MaterialTheme.colorScheme.outlineVariant,
-                    RoundedCornerShape(20.dp)
-                )
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Text(
                     amenity.name,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -313,10 +392,14 @@ private fun AmenitiesGrid(amenities: List<Amenity>) {
 
 @Composable
 private fun OwnerCard(name: String, phone: String, isVerified: Boolean) {
-    val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, MaterialTheme.colorScheme.outline
+        )
     ) {
         Row(
             modifier = Modifier
@@ -324,16 +407,35 @@ private fun OwnerCard(name: String, phone: String, isVerified: Boolean) {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Initial avatar
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    name.firstOrNull()?.uppercase() ?: "?",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(name, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     if (isVerified) {
                         Spacer(Modifier.width(4.dp))
                         Icon(
                             Icons.Default.Verified,
                             contentDescription = "Verified",
                             modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.secondary
                         )
                     }
                 }
@@ -343,14 +445,6 @@ private fun OwnerCard(name: String, phone: String, isVerified: Boolean) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            FilledTonalIconButton(
-                onClick = {
-                    val intent = Intent(Intent.ACTION_DIAL, "tel:$phone".toUri())
-                    context.startActivity(intent)
-                }
-            ) {
-                Icon(Icons.Default.Call, contentDescription = "Call")
-            }
         }
     }
 }
@@ -359,13 +453,19 @@ private fun OwnerCard(name: String, phone: String, isVerified: Boolean) {
 private fun ReviewCard(review: Review) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, MaterialTheme.colorScheme.outline
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     review.userName ?: "Anonymous",
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.weight(1f))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -373,19 +473,23 @@ private fun ReviewCard(review: Review) {
                         Icons.Default.Star,
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.tertiary
                     )
                     Spacer(Modifier.width(2.dp))
                     Text(
                         "${review.rating}",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
             review.comment?.let {
-                Spacer(Modifier.height(4.dp))
-                Text(it, style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -398,21 +502,24 @@ private fun ErrorState(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.padding(24.dp),
+        modifier = modifier.padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             "Couldn't load listing",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(6.dp))
         Text(
             message,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.error
         )
-        Spacer(Modifier.height(16.dp))
-        Button(onClick = onRetry) { Text("Retry") }
+        Spacer(Modifier.height(20.dp))
+        Button(
+            onClick = onRetry,
+            shape = RoundedCornerShape(12.dp)
+        ) { Text("Retry") }
     }
 }

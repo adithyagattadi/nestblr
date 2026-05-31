@@ -6,7 +6,8 @@ import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
 import com.example.nestblr.R
 
-private val provider = GoogleFont.Provider(
+// Exposed so Type.kt (Plus Jakarta Sans + Inter) can reuse the same provider.
+val GoogleFontsProvider: GoogleFont.Provider = GoogleFont.Provider(
     providerAuthority = "com.google.android.gms.fonts",
     providerPackage = "com.google.android.gms",
     certificates = R.array.com_google_android_gms_fonts_certs
@@ -15,8 +16,8 @@ private val provider = GoogleFont.Provider(
 private val poppins = GoogleFont("Poppins")
 
 val Poppins: FontFamily = FontFamily(
-    Font(googleFont = poppins, fontProvider = provider, weight = FontWeight.Normal),
-    Font(googleFont = poppins, fontProvider = provider, weight = FontWeight.Medium),
-    Font(googleFont = poppins, fontProvider = provider, weight = FontWeight.SemiBold),
-    Font(googleFont = poppins, fontProvider = provider, weight = FontWeight.Bold),
+    Font(googleFont = poppins, fontProvider = GoogleFontsProvider, weight = FontWeight.Normal),
+    Font(googleFont = poppins, fontProvider = GoogleFontsProvider, weight = FontWeight.Medium),
+    Font(googleFont = poppins, fontProvider = GoogleFontsProvider, weight = FontWeight.SemiBold),
+    Font(googleFont = poppins, fontProvider = GoogleFontsProvider, weight = FontWeight.Bold),
 )

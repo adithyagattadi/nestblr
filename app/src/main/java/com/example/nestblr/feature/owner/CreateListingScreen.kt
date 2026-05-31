@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.nestblr.ui.theme.brandFilterChipColors
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -135,7 +136,8 @@ fun CreateListingScreen(
                     FilterChip(
                         selected = id in state.selectedAmenityIds,
                         onClick = { viewModel.toggleAmenity(id) },
-                        label = { Text(name) }
+                        label = { Text(name) },
+                        colors = brandFilterChipColors()
                     )
                 }
             }
@@ -229,7 +231,8 @@ private fun LabeledChips(
                 FilterChip(
                     selected = selected == value,
                     onClick = { onSelect(value) },
-                    label = { Text(text) }
+                    label = { Text(text) },
+                    colors = brandFilterChipColors()
                 )
             }
         }
@@ -271,7 +274,8 @@ private fun RoomOptionEditor(
                     FilterChip(
                         selected = room.sharingType == type,
                         onClick = { onChange(room.copy(sharingType = type)) },
-                        label = { Text(type.lowercase().replaceFirstChar { it.uppercase() }) }
+                        label = { Text(type.lowercase().replaceFirstChar { it.uppercase() }) },
+                        colors = brandFilterChipColors()
                     )
                 }
             }

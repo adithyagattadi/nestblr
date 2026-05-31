@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.nestblr.ui.theme.brandFilterChipColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,7 +158,8 @@ private fun ChipRow(
                     // Tap selected chip again to clear it
                     onSelect(if (isSelected) null else value)
                 },
-                label = { Text(label) }
+                label = { Text(label) },
+                colors = brandFilterChipColors()
             )
         }
     }

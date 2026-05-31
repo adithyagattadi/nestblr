@@ -19,6 +19,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.nestblr.ui.theme.brandFilterChipColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -212,6 +213,7 @@ private fun RoleChip(
             )
         },
         shape = RoundedCornerShape(12.dp),
+        colors = brandFilterChipColors(),
         modifier = modifier.height(48.dp)
     )
 }

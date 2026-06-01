@@ -32,6 +32,9 @@ coil = "2.7.0"
 # Location
 playServicesLocation = "21.3.0"
 
+# Map
+osmdroid = "6.1.20"
+
 # Testing
 junit = "4.13.2"
 junitExt = "1.2.1"
@@ -79,6 +82,9 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 
 # Location
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+
+# Map (OpenStreetMap via osmdroid — no API key, no billing)
+osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

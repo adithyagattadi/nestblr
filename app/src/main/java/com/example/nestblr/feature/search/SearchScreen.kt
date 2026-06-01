@@ -10,10 +10,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.HomeWork
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
@@ -38,12 +40,21 @@ fun SearchScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var showFilters by remember { mutableStateOf(false) }
+    var showMap by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("NestBLR — PGs in Bengaluru") },
                 actions = {
+                    // List/Map toggle — single button, label flips with mode
+                    IconButton(onClick = { showMap = !showMap }) {
+                        Icon(
+                            imageVector = if (showMap) Icons.AutoMirrored.Filled.List
+                                          else Icons.Default.Map,
+                            contentDescription = if (showMap) "Show list" else "Show map"
+                        )
+                    }
                     // Filter button with badge when active
                     BadgedBox(
                         badge = {
@@ -109,34 +120,44 @@ fun SearchScreen(
                         )
                     }
                     else -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(
-                                start = 16.dp, end = 16.dp,
-                                top = 12.dp, bottom = 24.dp
-                            ),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            item {
-                                Column {
-                                    Text(
-                                        "PGs near you",
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        color = MaterialTheme.colorScheme.onBackground
-                                    )
-                                    Spacer(Modifier.height(2.dp))
-                                    Text(
-                                        "${state.listings.size} options around Koramangala",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(Modifier.height(4.dp))
+                        if (showMap) {
+                            NestBlrMap(
+                                centerLat = state.centerLat,
+                                centerLng = state.centerLng,
+                                listings = state.listings,
+                                onMarkerClick = onListingClick,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            LazyColumn(
+                                contentPadding = PaddingValues(
+                                    start = 16.dp, end = 16.dp,
+                                    top = 12.dp, bottom = 24.dp
+                                ),
+                                verticalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                item {
+                                    Column {
+                                        Text(
+                                            "PGs near you",
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            color = MaterialTheme.colorScheme.onBackground
+                                        )
+                                        Spacer(Modifier.height(2.dp))
+                                        Text(
+                                            "${state.listings.size} options around Koramangala",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                    }
                                 }
-                            }
-                            items(state.listings, key = { it.id }) { listing ->
-                                ListingCard(
-                                    listing = listing,
-                                    onClick = { onListingClick(listing.id) }
-                                )
+                                items(state.listings, key = { it.id }) { listing ->
+                                    ListingCard(
+                                        listing = listing,
+                                        onClick = { onListingClick(listing.id) }
+                                    )
+                                }
                             }
                         }
                     }

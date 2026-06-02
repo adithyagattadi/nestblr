@@ -10,6 +10,7 @@ import com.example.nestblr.feature.auth.AuthViewModel
 import com.example.nestblr.feature.auth.RoleGateScreen
 import com.example.nestblr.feature.detail.DetailScreen
 import com.example.nestblr.feature.owner.CreateListingScreen
+import com.example.nestblr.feature.owner.ManagePhotosScreen
 import com.example.nestblr.feature.owner.OwnerHomeScreen
 import com.example.nestblr.feature.search.SearchScreen
 
@@ -72,6 +73,9 @@ fun NestBlrNavHost(
             val authViewModel: AuthViewModel = hiltViewModel()
             OwnerHomeScreen(
                 onCreateListing = { navController.navigate(Route.CreateListing) },
+                onListingClick = { listingId ->
+                    navController.navigate(Route.ManageListingPhotos(listingId))
+                },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Route.Auth) {
@@ -84,7 +88,19 @@ fun NestBlrNavHost(
         composable<Route.CreateListing> {
             CreateListingScreen(
                 onBack = { navController.popBackStack() },
-                onCreated = { navController.popBackStack() }  // back to owner home (it reloads)
+                // After create, jump straight to photo management for the new listing,
+                // removing CreateListing from the back stack so Back returns to owner home.
+                onCreated = { newListingId ->
+                    navController.navigate(Route.ManageListingPhotos(newListingId)) {
+                        popUpTo(Route.CreateListing) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable<Route.ManageListingPhotos> {
+            ManagePhotosScreen(
+                onBack = { navController.popBackStack() }
             )
         }
     }

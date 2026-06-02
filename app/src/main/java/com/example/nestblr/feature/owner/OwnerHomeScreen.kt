@@ -1,6 +1,7 @@
 package com.example.nestblr.feature.owner
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,6 +23,7 @@ import com.example.nestblr.data.remote.dto.OwnerListingDto
 @Composable
 fun OwnerHomeScreen(
     onCreateListing: () -> Unit,
+    onListingClick: (String) -> Unit,
     onSignOut: () -> Unit,
     viewModel: OwnerHomeViewModel = hiltViewModel()
 ) {
@@ -111,6 +113,7 @@ fun OwnerHomeScreen(
                         items(state.listings, key = { it.id }) { listing ->
                             OwnerListingCard(
                                 listing = listing,
+                                onClick = { onListingClick(listing.id) },
                                 onDelete = { pendingDelete = listing }
                             )
                         }
@@ -143,10 +146,13 @@ fun OwnerHomeScreen(
 @Composable
 private fun OwnerListingCard(
     listing: OwnerListingDto,
+    onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),

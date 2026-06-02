@@ -22,13 +22,13 @@ import com.example.nestblr.ui.theme.brandFilterChipColors
 @Composable
 fun CreateListingScreen(
     onBack: () -> Unit,
-    onCreated: () -> Unit,
+    onCreated: (listingId: String) -> Unit,
     viewModel: CreateListingViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
 
     LaunchedEffect(state.createdId) {
-        if (state.createdId != null) onCreated()
+        state.createdId?.let(onCreated)
     }
 
     Scaffold(

@@ -6,13 +6,17 @@ import com.example.nestblr.data.remote.dto.CreatedIdDto
 import com.example.nestblr.data.remote.dto.ListingDetailDto
 import com.example.nestblr.data.remote.dto.ListingSummaryDto
 import com.example.nestblr.data.remote.dto.OwnerListingDto
+import com.example.nestblr.data.remote.dto.PhotoDto
 import com.example.nestblr.data.remote.dto.RegisterRequest
 import com.example.nestblr.data.remote.dto.UserDto
+import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -63,5 +67,18 @@ interface NestBlrApi {
     @DELETE("api/v1/owner/listings/{id}")
     suspend fun deleteListing(
         @Path("id") id: String
+    ): ApiResponse<Map<String, String>>
+
+    @Multipart
+    @POST("api/v1/owner/listings/{id}/photos")
+    suspend fun uploadPhoto(
+        @Path("id") id: String,
+        @Part file: MultipartBody.Part
+    ): ApiResponse<PhotoDto>
+
+    @DELETE("api/v1/owner/listings/{listingId}/photos/{photoId}")
+    suspend fun deletePhoto(
+        @Path("listingId") listingId: String,
+        @Path("photoId") photoId: String
     ): ApiResponse<Map<String, String>>
 }

@@ -15,7 +15,6 @@
 
     <!-- Required by osmdroid for tile caching on older Android (no-op on API 29+). -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-
     <application
         android:name=".NestBlrApplication"
         android:allowBackup="true"

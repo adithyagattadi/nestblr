@@ -1,7 +1,11 @@
 package com.example.nestblr.feature.owner
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import com.example.nestblr.core.navigation.Route
+import com.example.nestblr.data.remote.NestBlrApi
 import com.example.nestblr.data.remote.dto.CreateListingRequest
 import com.example.nestblr.data.remote.dto.CreateRoomOptionRequest
 import com.example.nestblr.data.repository.OwnerRepository
@@ -54,6 +58,7 @@ data class CreateListingState(
     val rooms: List<RoomOptionForm> = listOf(RoomOptionForm()),
     val selectedAmenityIds: Set<Int> = emptySet(),
     val isSubmitting: Boolean = false,
+    val isLoadingExisting: Boolean = false,  // true while pre-filling the form in edit mode
     val error: String? = null,
     val createdId: String? = null   // non-null = success, triggers navigation back
 )
@@ -76,11 +81,71 @@ val AMENITIES: List<Pair<Int, String>> = listOf(
 
 @HiltViewModel
 class CreateListingViewModel @Inject constructor(
-    private val repo: OwnerRepository
+    savedStateHandle: SavedStateHandle,
+    private val repo: OwnerRepository,
+    private val api: NestBlrApi
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CreateListingState())
     val state: StateFlow<CreateListingState> = _state.asStateFlow()
+
+    /**
+     * Non-null only when this VM backs Route.EditListing. The CreateListing route
+     * carries no args, so toRoute<EditListing>() throws there — we treat that as create mode.
+     */
+    val editingListingId: String? = try {
+        savedStateHandle.toRoute<Route.EditListing>().listingId
+    } catch (e: Exception) {
+        null
+    }
+
+    init {
+        editingListingId?.let { loadForEdit(it) }
+    }
+
+    /** Fetch the listing via the public detail endpoint and map it back into form state. */
+    private fun loadForEdit(id: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingExisting = true, error = null) }
+            runCatching { api.getListingById(id).data }.fold(
+                onSuccess = { dto ->
+                    _state.update {
+                        it.copy(
+                            isLoadingExisting = false,
+                            title = dto.title,
+                            description = dto.description ?: "",
+                            addressLine = dto.addressLine,
+                            // Backend returns the locality as a display string; map back to the enum.
+                            locality = Locality.entries.firstOrNull { l -> l.displayName == dto.locality }
+                                ?: Locality.KORAMANGALA,
+                            pincode = dto.pincode ?: "",
+                            // Listing-level contact phone (owner.phone is a placeholder for email-auth users).
+                            contactPhone = dto.contactPhone ?: "",
+                            genderPreference = dto.genderPreference,
+                            pgType = dto.pgType,
+                            foodType = dto.foodType,
+                            // RoomOptionDto has Int fields; the form binds to Strings.
+                            rooms = dto.roomOptions.map { r ->
+                                RoomOptionForm(
+                                    sharingType = r.sharingType,
+                                    monthlyRent = r.monthlyRent.toString(),
+                                    securityDeposit = r.securityDeposit.toString(),
+                                    totalBeds = r.totalBeds.toString(),
+                                    availableBeds = r.availableBeds.toString()
+                                )
+                            }.ifEmpty { listOf(RoomOptionForm()) },
+                            selectedAmenityIds = dto.amenities.map { a -> a.id }.toSet()
+                        )
+                    }
+                },
+                onFailure = { e ->
+                    _state.update {
+                        it.copy(isLoadingExisting = false, error = e.message ?: "Failed to load listing")
+                    }
+                }
+            )
+        }
+    }
 
     fun onTitle(v: String) = _state.update { it.copy(title = v, error = null) }
     fun onDescription(v: String) = _state.update { it.copy(description = v) }
@@ -169,10 +234,14 @@ class CreateListingViewModel @Inject constructor(
 
         viewModelScope.launch {
             _state.update { it.copy(isSubmitting = true, error = null) }
-            repo.createListing(req).fold(
-                onSuccess = { id -> _state.update { it.copy(isSubmitting = false, createdId = id) } },
+            val editId = editingListingId
+            val result = if (editId == null) repo.createListing(req)
+                         else repo.updateListing(editId, req)
+            result.fold(
+                // In edit mode, reuse the existing id so the create flow's createdId navigation still fires.
+                onSuccess = { id -> _state.update { it.copy(isSubmitting = false, createdId = editId ?: id) } },
                 onFailure = { e ->
-                    _state.update { it.copy(isSubmitting = false, error = e.message ?: "Failed to create listing") }
+                    _state.update { it.copy(isSubmitting = false, error = e.message ?: "Failed to save listing") }
                 }
             )
         }

@@ -24,5 +24,8 @@ sealed interface Route {
     data object CreateListing : Route
 
     @Serializable
+    data class EditListing(val listingId: String) : Route
+
+    @Serializable
     data class ManageListingPhotos(val listingId: String) : Route
 }

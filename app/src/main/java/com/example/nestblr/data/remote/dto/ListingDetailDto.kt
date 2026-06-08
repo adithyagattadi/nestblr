@@ -16,6 +16,7 @@ data class ListingDetailDto(
     val genderPreference: String,
     val pgType: String,
     val foodType: String,
+    val contactPhone: String? = null,
     val avgRating: Double,
     val reviewCount: Int,
     val status: String,

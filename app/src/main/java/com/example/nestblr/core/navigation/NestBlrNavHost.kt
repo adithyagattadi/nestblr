@@ -5,6 +5,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.example.nestblr.feature.auth.AuthScreen
 import com.example.nestblr.feature.auth.AuthViewModel
 import com.example.nestblr.feature.auth.RoleGateScreen
@@ -73,7 +74,10 @@ fun NestBlrNavHost(
             val authViewModel: AuthViewModel = hiltViewModel()
             OwnerHomeScreen(
                 onCreateListing = { navController.navigate(Route.CreateListing) },
-                onListingClick = { listingId ->
+                onEditListing = { listingId ->
+                    navController.navigate(Route.EditListing(listingId))
+                },
+                onManagePhotos = { listingId ->
                     navController.navigate(Route.ManageListingPhotos(listingId))
                 },
                 onSignOut = {
@@ -94,6 +98,19 @@ fun NestBlrNavHost(
                     navController.navigate(Route.ManageListingPhotos(newListingId)) {
                         popUpTo(Route.CreateListing) { inclusive = true }
                     }
+                }
+            )
+        }
+
+        composable<Route.EditListing> { backStackEntry ->
+            val listingId = backStackEntry.toRoute<Route.EditListing>().listingId
+            CreateListingScreen(
+                isEditMode = true,
+                onBack = { navController.popBackStack() },
+                // After save, pop back to OwnerHome — it reloads on resume.
+                onCreated = { navController.popBackStack() },
+                onManagePhotos = {
+                    navController.navigate(Route.ManageListingPhotos(listingId))
                 }
             )
         }

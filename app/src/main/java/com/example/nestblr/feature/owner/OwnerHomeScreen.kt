@@ -9,7 +9,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,12 +26,14 @@ import com.example.nestblr.data.remote.dto.OwnerListingDto
 @Composable
 fun OwnerHomeScreen(
     onCreateListing: () -> Unit,
-    onListingClick: (String) -> Unit,
+    onEditListing: (String) -> Unit,
+    onManagePhotos: (String) -> Unit,
     onSignOut: () -> Unit,
     viewModel: OwnerHomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     var pendingDelete by remember { mutableStateOf<OwnerListingDto?>(null) }
+    var sheetFor by remember { mutableStateOf<OwnerListingDto?>(null) }
 
     // Reload when this screen re-enters the foreground (e.g. after creating a listing)
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -113,12 +118,35 @@ fun OwnerHomeScreen(
                         items(state.listings, key = { it.id }) { listing ->
                             OwnerListingCard(
                                 listing = listing,
-                                onClick = { onListingClick(listing.id) },
-                                onDelete = { pendingDelete = listing }
+                                onClick = { sheetFor = listing }
                             )
                         }
                         item { Spacer(Modifier.height(72.dp)) }  // FAB clearance
                     }
+                }
+            }
+        }
+    }
+
+    // Action menu — replaces tapping the card going straight to photo management.
+    sheetFor?.let { listing ->
+        ModalBottomSheet(onDismissRequest = { sheetFor = null }) {
+            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+                SheetRow(Icons.Outlined.Edit, "Edit details") {
+                    sheetFor = null
+                    onEditListing(listing.id)
+                }
+                SheetRow(Icons.Outlined.Image, "Manage photos") {
+                    sheetFor = null
+                    onManagePhotos(listing.id)
+                }
+                SheetRow(
+                    Icons.Outlined.DeleteOutline,
+                    "Delete listing",
+                    tint = MaterialTheme.colorScheme.error
+                ) {
+                    sheetFor = null
+                    pendingDelete = listing
                 }
             }
         }
@@ -146,8 +174,7 @@ fun OwnerHomeScreen(
 @Composable
 private fun OwnerListingCard(
     listing: OwnerListingDto,
-    onClick: () -> Unit,
-    onDelete: () -> Unit
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -161,7 +188,7 @@ private fun OwnerListingCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, top = 14.dp, bottom = 14.dp, end = 8.dp),
+                .padding(start = 16.dp, top = 14.dp, bottom = 14.dp, end = 16.dp),
             verticalAlignment = Alignment.Top
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -194,18 +221,27 @@ private fun OwnerListingCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    Icons.Outlined.DeleteOutline,
-                    contentDescription = "Delete listing",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
         }
+    }
+}
+
+@Composable
+private fun SheetRow(
+    icon: ImageVector,
+    label: String,
+    tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, tint = tint)
+        Spacer(Modifier.width(16.dp))
+        Text(label, style = MaterialTheme.typography.bodyLarge, color = tint)
     }
 }
 

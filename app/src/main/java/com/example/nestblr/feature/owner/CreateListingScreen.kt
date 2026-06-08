@@ -23,6 +23,8 @@ import com.example.nestblr.ui.theme.brandFilterChipColors
 fun CreateListingScreen(
     onBack: () -> Unit,
     onCreated: (listingId: String) -> Unit,
+    isEditMode: Boolean = false,
+    onManagePhotos: () -> Unit = {},
     viewModel: CreateListingViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -34,7 +36,7 @@ fun CreateListingScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Create listing") },
+                title = { Text(if (isEditMode) "Edit listing" else "Create listing") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -43,6 +45,16 @@ fun CreateListingScreen(
             )
         }
     ) { padding ->
+        // Avoid flashing an empty form while the existing listing is being fetched.
+        if (isEditMode && state.isLoadingExisting) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+            return@Scaffold
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -160,8 +172,15 @@ fun CreateListingScreen(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text("Create listing")
+                    Text(if (isEditMode) "Save changes" else "Create listing")
                 }
+            }
+
+            if (isEditMode) {
+                TextButton(
+                    onClick = onManagePhotos,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Manage photos") }
             }
 
             Spacer(Modifier.height(24.dp))

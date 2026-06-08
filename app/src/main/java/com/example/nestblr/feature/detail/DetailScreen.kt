@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.nestblr.core.util.resolveBackendUrl
 import com.example.nestblr.domain.model.Amenity
 import com.example.nestblr.domain.model.ListingDetail
 import com.example.nestblr.domain.model.Review
@@ -283,7 +284,7 @@ private fun PhotoCarousel(urls: List<String>) {
     Box(modifier = Modifier.fillMaxWidth().height(260.dp)) {
         HorizontalPager(state = pagerState) { page ->
             AsyncImage(
-                model = urls[page],
+                model = resolveBackendUrl(urls[page]),
                 contentDescription = "Photo ${page + 1}",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()

@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.nestblr.core.util.resolveBackendUrl
 import com.example.nestblr.domain.model.Gender
 import com.example.nestblr.domain.model.ListingSummary
 import com.example.nestblr.domain.model.PgType
@@ -254,7 +255,7 @@ private fun ListingCard(
             // Edge-to-edge photo
             if (listing.coverPhotoUrl != null) {
                 AsyncImage(
-                    model = listing.coverPhotoUrl,
+                    model = resolveBackendUrl(listing.coverPhotoUrl),
                     contentDescription = listing.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier

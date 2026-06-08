@@ -24,7 +24,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.example.nestblr.BuildConfig
+import com.example.nestblr.core.util.resolveBackendUrl
 import com.example.nestblr.domain.model.Photo
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -203,7 +203,7 @@ private fun PhotoCell(
             .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         AsyncImage(
-            model = BuildConfig.BASE_URL.trimEnd('/') + photo.url,
+            model = resolveBackendUrl(photo.url),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()

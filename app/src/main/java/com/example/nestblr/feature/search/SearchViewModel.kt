@@ -2,6 +2,7 @@ package com.example.nestblr.feature.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.nestblr.core.model.Locality
 import com.example.nestblr.data.repository.ListingRepository
 import com.example.nestblr.domain.model.ListingSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,8 +17,10 @@ data class SearchUiState(
     val isLoading: Boolean = false,
     val listings: List<ListingSummary> = emptyList(),
     val error: String? = null,
-    val centerLat: Double = 12.9352,  // Default: Koramangala
-    val centerLng: Double = 77.6245,
+    // Single source of truth for the map/list center: the picked locality.
+    val selectedLocality: Locality = Locality.KORAMANGALA,
+    val centerLat: Double = selectedLocality.lat,
+    val centerLng: Double = selectedLocality.lng,
     val radiusKm: Double = 5.0,
     val filters: FilterState = FilterState()
 )
@@ -61,6 +64,22 @@ class SearchViewModel @Inject constructor(
                 }
             )
         }
+    }
+
+    /** Tenant picked a locality — recenter and reload both list and map. */
+    fun onLocalityChanged(locality: Locality) {
+        _state.update {
+            it.copy(
+                selectedLocality = locality,
+                centerLat = locality.lat,
+                centerLng = locality.lng,
+                // Drop stale results so the area transitions through a clean
+                // loading state instead of showing the old locality's data.
+                listings = emptyList(),
+                isLoading = true
+            )
+        }
+        load()
     }
 
     fun applyFilters(filters: FilterState) {

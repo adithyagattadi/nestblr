@@ -2,6 +2,7 @@ package com.example.nestblr.feature.search
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -18,7 +19,9 @@ import org.osmdroid.views.overlay.Marker
 /**
  * Compose wrapper around osmdroid's MapView showing OpenStreetMap tiles.
  * Initial centre is set once via the factory; the update block re-syncs
- * markers when [listings] changes so pans aren't reset on recomposition.
+ * markers when [listings] changes. The map recenters only when
+ * [centerLat]/[centerLng] actually change (e.g. the tenant picks a new
+ * locality) — not on every marker refresh, so user pans aren't reset.
  */
 @Composable
 fun NestBlrMap(
@@ -31,6 +34,9 @@ fun NestBlrMap(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapView = remember { MapView(context) }
+    // Tracks the last center we animated to. Seeded with the initial center
+    // (set by the factory) so the first update doesn't re-animate.
+    val lastCenter = remember { mutableStateOf(GeoPoint(centerLat, centerLng)) }
 
     // osmdroid needs explicit onResume/onPause hooks — without these, tiles
     // silently stop loading after rotation/foregrounding. Single most common
@@ -62,6 +68,14 @@ fun NestBlrMap(
             }
         },
         update = { mv ->
+            // Recenter only when the center actually changed (locality switch),
+            // not on every marker refresh — otherwise user pans would reset.
+            val target = GeoPoint(centerLat, centerLng)
+            if (lastCenter.value != target) {
+                mv.controller.animateTo(target)
+                lastCenter.value = target
+            }
+
             // Refresh only marker overlays — leaves user pan/zoom untouched.
             mv.overlays.removeAll { it is Marker }
             listings.forEach { listing ->

@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.nestblr.core.model.Locality
 import com.example.nestblr.ui.theme.brandFilterChipColors
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)

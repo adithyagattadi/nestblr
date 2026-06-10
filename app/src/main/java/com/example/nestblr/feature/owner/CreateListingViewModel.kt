@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.example.nestblr.core.model.Locality
 import com.example.nestblr.core.navigation.Route
 import com.example.nestblr.data.remote.NestBlrApi
 import com.example.nestblr.data.remote.dto.CreateListingRequest
@@ -25,25 +26,6 @@ data class RoomOptionForm(
     val totalBeds: String = "",
     val availableBeds: String = ""
 )
-
-/**
- * Bengaluru localities with approximate center coordinates.
- * Temporary stand-in for the map pin picker — owner picks a locality,
- * we use its centroid. Later replaced by an exact map pin.
- */
-enum class Locality(val displayName: String, val lat: Double, val lng: Double) {
-    KORAMANGALA("Koramangala", 12.9352, 77.6245),
-    HSR_LAYOUT("HSR Layout", 12.9116, 77.6412),
-    BTM_LAYOUT("BTM Layout", 12.9165, 77.6101),
-    INDIRANAGAR("Indiranagar", 12.9716, 77.6412),
-    JAYANAGAR("Jayanagar", 12.9250, 77.5938),
-    WHITEFIELD("Whitefield", 12.9698, 77.7500),
-    MARATHAHALLI("Marathahalli", 12.9591, 77.6974),
-    BELLANDUR("Bellandur", 12.9259, 77.6649),
-    ELECTRONIC_CITY("Electronic City", 12.8452, 77.6602),
-    JP_NAGAR("JP Nagar", 12.9077, 77.5853),
-    SARJAPUR("Sarjapur Road", 12.9010, 77.6870)
-}
 
 data class CreateListingState(
     val title: String = "",

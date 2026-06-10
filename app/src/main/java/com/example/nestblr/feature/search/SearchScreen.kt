@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.HomeWork
 import androidx.compose.material.icons.filled.LocationOn
@@ -42,11 +43,35 @@ fun SearchScreen(
     val state by viewModel.state.collectAsState()
     var showFilters by remember { mutableStateOf(false) }
     var showMap by remember { mutableStateOf(false) }
+    var showLocalityPicker by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("NestBLR — PGs in Bengaluru") },
+                title = {
+                    // Two-line header. Line 2 is tappable → opens the locality picker.
+                    Column(
+                        modifier = Modifier.clickable { showLocalityPicker = true }
+                    ) {
+                        Text(
+                            "NestBLR",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "PGs near ${state.selectedLocality.displayName}",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Choose locality",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                },
                 actions = {
                     // List/Map toggle — single button, label flips with mode
                     IconButton(onClick = { showMap = !showMap }) {
@@ -113,6 +138,17 @@ fun SearchScreen(
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
+                    // In map mode the map always renders — even with zero results it
+                    // recenters to the picked locality (markers just empty out).
+                    showMap -> {
+                        NestBlrMap(
+                            centerLat = state.centerLat,
+                            centerLng = state.centerLng,
+                            listings = state.listings,
+                            onMarkerClick = onListingClick,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                     state.listings.isEmpty() -> {
                         EmptyState(
                             hasFilters = state.filters.hasActiveFilters,
@@ -121,44 +157,34 @@ fun SearchScreen(
                         )
                     }
                     else -> {
-                        if (showMap) {
-                            NestBlrMap(
-                                centerLat = state.centerLat,
-                                centerLng = state.centerLng,
-                                listings = state.listings,
-                                onMarkerClick = onListingClick,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            LazyColumn(
-                                contentPadding = PaddingValues(
-                                    start = 16.dp, end = 16.dp,
-                                    top = 12.dp, bottom = 24.dp
-                                ),
-                                verticalArrangement = Arrangement.spacedBy(14.dp)
-                            ) {
-                                item {
-                                    Column {
-                                        Text(
-                                            "PGs near you",
-                                            style = MaterialTheme.typography.headlineSmall,
-                                            color = MaterialTheme.colorScheme.onBackground
-                                        )
-                                        Spacer(Modifier.height(2.dp))
-                                        Text(
-                                            "${state.listings.size} options around Koramangala",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Spacer(Modifier.height(4.dp))
-                                    }
-                                }
-                                items(state.listings, key = { it.id }) { listing ->
-                                    ListingCard(
-                                        listing = listing,
-                                        onClick = { onListingClick(listing.id) }
+                        LazyColumn(
+                            contentPadding = PaddingValues(
+                                start = 16.dp, end = 16.dp,
+                                top = 12.dp, bottom = 24.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            item {
+                                Column {
+                                    Text(
+                                        "PGs near you",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        color = MaterialTheme.colorScheme.onBackground
                                     )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        "${state.listings.size} options around ${state.selectedLocality.displayName}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(Modifier.height(4.dp))
                                 }
+                            }
+                            items(state.listings, key = { it.id }) { listing ->
+                                ListingCard(
+                                    listing = listing,
+                                    onClick = { onListingClick(listing.id) }
+                                )
                             }
                         }
                     }
@@ -178,6 +204,18 @@ fun SearchScreen(
                 onClearAll = {
                     viewModel.clearFilters()
                     showFilters = false
+                }
+            )
+        }
+
+        // Locality picker sheet
+        if (showLocalityPicker) {
+            LocalityPickerSheet(
+                selected = state.selectedLocality,
+                onDismiss = { showLocalityPicker = false },
+                onLocalitySelected = { locality ->
+                    viewModel.onLocalityChanged(locality)
+                    showLocalityPicker = false
                 }
             )
         }

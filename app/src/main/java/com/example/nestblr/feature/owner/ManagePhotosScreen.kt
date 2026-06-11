@@ -5,6 +5,8 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -16,6 +18,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,7 +67,19 @@ fun ManagePhotosScreen(
             )
         }
     ) { padding ->
-        Box(
+        val refreshState = rememberPullToRefreshState()
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = viewModel::refresh,
+            state = refreshState,
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    state = refreshState,
+                    isRefreshing = state.isRefreshing,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
@@ -72,18 +89,22 @@ fun ManagePhotosScreen(
 
                 // Full-screen error ONLY for initial-load failure with no existing photos.
                 // Upload errors never replace the grid.
-                state.loadError != null && state.photos.isEmpty() -> ErrorState(
-                    message = state.loadError!!,
-                    onRetry = viewModel::loadPhotos,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                // Wrapped in a verticalScroll so the pull-to-refresh gesture still
+                // registers — PullToRefreshBox needs a scrollable child to detect it.
+                state.loadError != null && state.photos.isEmpty() -> CenteredScrollable {
+                    ErrorState(
+                        message = state.loadError!!,
+                        onRetry = viewModel::loadPhotos
+                    )
+                }
 
-                state.photos.isEmpty() -> EmptyState(
-                    onAdd = onAdd,
-                    isUploading = state.isUploading,
-                    uploadError = state.uploadError,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                state.photos.isEmpty() -> CenteredScrollable {
+                    EmptyState(
+                        onAdd = onAdd,
+                        isUploading = state.isUploading,
+                        uploadError = state.uploadError
+                    )
+                }
 
                 else -> PhotosGrid(
                     photos = state.photos,
@@ -112,6 +133,23 @@ fun ManagePhotosScreen(
             }
         )
     }
+}
+
+/**
+ * Centers short content but stays vertically scrollable, so a PullToRefreshBox
+ * parent receives the nested-scroll events it needs to detect the pull gesture
+ * (a plain centered Column emits none).
+ */
+@Composable
+private fun CenteredScrollable(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        content = content
+    )
 }
 
 @Composable

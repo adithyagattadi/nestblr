@@ -14,6 +14,7 @@ import javax.inject.Inject
 
 data class OwnerHomeState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val listings: List<OwnerListingDto> = emptyList(),
     val error: String? = null
 )
@@ -40,6 +41,26 @@ class OwnerHomeViewModel @Inject constructor(
                 onFailure = { e ->
                     _state.update {
                         OwnerHomeState(isLoading = false, error = e.message ?: "Failed to load")
+                    }
+                }
+            )
+        }
+    }
+
+    /** Pull-to-refresh: reloads the listings while keeping the current list
+     *  visible (gesture indicator via isRefreshing, not the full-screen spinner). */
+    fun refresh() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshing = true, error = null) }
+            repo.getMyListings().fold(
+                onSuccess = { list ->
+                    _state.update {
+                        it.copy(isRefreshing = false, listings = list, error = null)
+                    }
+                },
+                onFailure = { e ->
+                    _state.update {
+                        it.copy(isRefreshing = false, error = e.message ?: "Failed to load")
                     }
                 }
             )

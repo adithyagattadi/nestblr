@@ -20,6 +20,9 @@ import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -157,6 +160,21 @@ fun SearchScreen(
                         )
                     }
                     else -> {
+                        val refreshState = rememberPullToRefreshState()
+                        PullToRefreshBox(
+                            isRefreshing = state.isRefreshing,
+                            onRefresh = viewModel::refresh,
+                            state = refreshState,
+                            indicator = {
+                                PullToRefreshDefaults.Indicator(
+                                    state = refreshState,
+                                    isRefreshing = state.isRefreshing,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.align(Alignment.TopCenter)
+                                )
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        ) {
                         LazyColumn(
                             contentPadding = PaddingValues(
                                 start = 16.dp, end = 16.dp,
@@ -186,6 +204,7 @@ fun SearchScreen(
                                     onClick = { onListingClick(listing.id) }
                                 )
                             }
+                        }
                         }
                     }
                 }

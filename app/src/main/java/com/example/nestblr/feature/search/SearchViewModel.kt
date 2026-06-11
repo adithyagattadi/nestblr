@@ -15,6 +15,7 @@ import javax.inject.Inject
 
 data class SearchUiState(
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val listings: List<ListingSummary> = emptyList(),
     val error: String? = null,
     // Single source of truth for the map/list center: the picked locality.
@@ -40,18 +41,7 @@ class SearchViewModel @Inject constructor(
     fun load() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            val f = _state.value.filters
-            val result = repo.searchNearby(
-                lat = _state.value.centerLat,
-                lng = _state.value.centerLng,
-                radiusKm = _state.value.radiusKm,
-                gender = f.gender,
-                food = f.food,
-                pgType = f.pgType,
-                minRent = if (f.minRent != FilterState.MIN_RENT) f.minRent else null,
-                maxRent = if (f.maxRent != FilterState.MAX_RENT) f.maxRent else null
-            )
-            result.fold(
+            doSearch().fold(
                 onSuccess = { listings ->
                     _state.update {
                         it.copy(isLoading = false, listings = listings, error = null)
@@ -64,6 +54,40 @@ class SearchViewModel @Inject constructor(
                 }
             )
         }
+    }
+
+    /** Pull-to-refresh: same fetch as [load] but drives the gesture indicator
+     *  (isRefreshing) instead of the full-screen spinner (isLoading). */
+    fun refresh() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshing = true, error = null) }
+            doSearch().fold(
+                onSuccess = { listings ->
+                    _state.update {
+                        it.copy(isRefreshing = false, listings = listings, error = null)
+                    }
+                },
+                onFailure = { e ->
+                    _state.update {
+                        it.copy(isRefreshing = false, error = e.message ?: "Unknown error")
+                    }
+                }
+            )
+        }
+    }
+
+    private suspend fun doSearch() = run {
+        val f = _state.value.filters
+        repo.searchNearby(
+            lat = _state.value.centerLat,
+            lng = _state.value.centerLng,
+            radiusKm = _state.value.radiusKm,
+            gender = f.gender,
+            food = f.food,
+            pgType = f.pgType,
+            minRent = if (f.minRent != FilterState.MIN_RENT) f.minRent else null,
+            maxRent = if (f.maxRent != FilterState.MAX_RENT) f.maxRent else null
+        )
     }
 
     /** Tenant picked a locality — recenter and reload both list and map. */

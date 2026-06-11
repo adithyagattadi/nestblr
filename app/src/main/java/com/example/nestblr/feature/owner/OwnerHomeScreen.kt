@@ -14,7 +14,12 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,16 +73,30 @@ fun OwnerHomeScreen(
             )
         }
     ) { padding ->
-        Box(
+        val refreshState = rememberPullToRefreshState()
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = viewModel::refresh,
+            state = refreshState,
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    state = refreshState,
+                    isRefreshing = state.isRefreshing,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
             when {
                 state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                state.error != null -> {
+                // Empty/error states are wrapped in a verticalScroll (CenteredScrollable)
+                // so the pull-to-refresh gesture registers even with no scrollable list.
+                state.error != null -> CenteredScrollable {
                     Column(
-                        modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                        modifier = Modifier.padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text("Couldn't load your listings", fontWeight = FontWeight.Bold)
@@ -91,9 +110,9 @@ fun OwnerHomeScreen(
                         Button(onClick = viewModel::load) { Text("Retry") }
                     }
                 }
-                state.listings.isEmpty() -> {
+                state.listings.isEmpty() -> CenteredScrollable {
                     Column(
-                        modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                        modifier = Modifier.padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -184,6 +203,23 @@ fun OwnerHomeScreen(
             }
         )
     }
+}
+
+/**
+ * Centers short content but stays vertically scrollable, so the PullToRefreshBox
+ * parent receives the nested-scroll events it needs to detect the pull gesture
+ * (a plain centered Column emits none — empty/error states wouldn't refresh).
+ */
+@Composable
+private fun CenteredScrollable(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        content = content
+    )
 }
 
 @Composable

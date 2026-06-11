@@ -20,6 +20,7 @@ import javax.inject.Inject
 
 data class PhotoManagerState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val photos: List<Photo> = emptyList(),
     val isUploading: Boolean = false,
     /** Failure of the initial detail-fetch. Drives the full-screen error state. */
@@ -59,6 +60,29 @@ class PhotoManagerViewModel @Inject constructor(
                 onFailure = { e ->
                     _state.update {
                         it.copy(isLoading = false, loadError = e.message ?: "Couldn't load photos")
+                    }
+                }
+            )
+        }
+    }
+
+    /** Pull-to-refresh: re-fetches the photo grid (e.g. to verify a delete or
+     *  sync state) without the full-screen spinner. */
+    fun refresh() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshing = true, loadError = null) }
+            repo.getListingPhotos(listingId).fold(
+                onSuccess = { photos ->
+                    _state.update {
+                        it.copy(
+                            isRefreshing = false,
+                            photos = photos.sortedBy { p -> p.displayOrder }
+                        )
+                    }
+                },
+                onFailure = { e ->
+                    _state.update {
+                        it.copy(isRefreshing = false, loadError = e.message ?: "Couldn't load photos")
                     }
                 }
             )

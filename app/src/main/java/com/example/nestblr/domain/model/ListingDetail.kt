@@ -68,6 +68,7 @@ data class Amenity(
 
 data class Review(
     val id: String,
+    val userId: String?,
     val userName: String?,
     val rating: Int,
     val comment: String?,
@@ -111,4 +112,4 @@ fun PhotoDto.toDomain() = Photo(id, url, thumbnailUrl, displayOrder)
 
 fun AmenityDto.toDomain() = Amenity(id, name, iconKey)
 
-fun ReviewDto.toDomain() = Review(id, userName, rating, comment, stayedFrom, stayedUntil, createdAt)
+fun ReviewDto.toDomain() = Review(id, userId, userName, rating, comment, stayedFrom, stayedUntil, createdAt)

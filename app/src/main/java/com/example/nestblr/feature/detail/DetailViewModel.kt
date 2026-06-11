@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.example.nestblr.core.navigation.Route
+import com.example.nestblr.data.remote.NestBlrApi
 import com.example.nestblr.data.repository.FavoritesRepository
 import com.example.nestblr.data.repository.ListingRepository
 import com.example.nestblr.domain.model.ListingDetail
@@ -21,14 +22,20 @@ data class DetailUiState(
     val detail: ListingDetail? = null,
     val error: String? = null,
     // Transient favorite-toggle failure — shown as a snackbar, not the error screen.
-    val favoriteError: String? = null
+    val favoriteError: String? = null,
+    // Whether the signed-in user is a tenant (gates the "Write a review" button).
+    val isTenant: Boolean = false,
+    // Backend user id of the signed-in user — used to find their own review in the
+    // loaded list so "Edit your review" survives an app restart.
+    val currentUserId: String? = null
 )
 
 @HiltViewModel
 class DetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repo: ListingRepository,
-    private val favoritesRepo: FavoritesRepository
+    private val favoritesRepo: FavoritesRepository,
+    private val api: NestBlrApi
 ) : ViewModel() {
 
     // Extract listing ID from the navigation route — type-safe
@@ -39,6 +46,7 @@ class DetailViewModel @Inject constructor(
 
     init {
         load()
+        resolveRole()
     }
 
     fun load() {
@@ -46,12 +54,28 @@ class DetailViewModel @Inject constructor(
             _state.update { it.copy(isLoading = true, error = null) }
             repo.getById(listingId).fold(
                 onSuccess = { detail ->
-                    _state.update { DetailUiState(isLoading = false, detail = detail) }
+                    _state.update { it.copy(isLoading = false, detail = detail, error = null) }
                 },
                 onFailure = { e ->
                     _state.update {
-                        DetailUiState(isLoading = false, error = e.message ?: "Unknown error")
+                        it.copy(isLoading = false, error = e.message ?: "Unknown error")
                     }
+                }
+            )
+        }
+    }
+
+    /** Reviews are tenant-only; resolve role once to gate the review affordance.
+     *  Also capture the user id to detect their own review across restarts.
+     *  On failure, fall back to showing the button (the backend still enforces it). */
+    private fun resolveRole() {
+        viewModelScope.launch {
+            runCatching { api.getMe().data }.fold(
+                onSuccess = { user ->
+                    _state.update { it.copy(isTenant = user.role == "TENANT", currentUserId = user.id) }
+                },
+                onFailure = {
+                    _state.update { it.copy(isTenant = true) }
                 }
             )
         }

@@ -24,7 +24,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.example.nestblr.data.remote.dto.ReviewDto
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +53,25 @@ fun DetailScreen(
     viewModel: DetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+
+    var showReviewSheet by remember { mutableStateOf(false) }
+    // The user's own review, learned in-session from the submit response (survives
+    // reloads but not process death).
+    var submittedReview by remember { mutableStateOf<ReviewDto?>(null) }
+
+    // Persisted detection: find the user's review in the loaded list by userId — this
+    // makes "Edit your review" + pre-fill survive an app restart. Prefer the fresher
+    // in-session value when present.
+    val persistedReview: ReviewDto? = state.currentUserId?.let { uid ->
+        state.detail?.recentReviews?.firstOrNull { it.userId == uid }?.let { r ->
+            ReviewDto(
+                id = r.id, userId = r.userId, userName = r.userName, rating = r.rating,
+                comment = r.comment, stayedFrom = r.stayedFrom, stayedUntil = r.stayedUntil,
+                createdAt = r.createdAt
+            )
+        }
+    }
+    val myReview: ReviewDto? = submittedReview ?: persistedReview
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(state.favoriteError) {
@@ -111,8 +133,29 @@ fun DetailScreen(
                     onRetry = viewModel::load,
                     modifier = Modifier.align(Alignment.Center)
                 )
-                state.detail != null -> DetailContent(state.detail!!)
+                state.detail != null -> DetailContent(
+                    detail = state.detail!!,
+                    canReview = state.isTenant,
+                    hasMyReview = myReview != null,
+                    onWriteReview = { showReviewSheet = true }
+                )
             }
+        }
+    }
+
+    if (showReviewSheet) {
+        state.detail?.let { d ->
+            ReviewSheet(
+                listingId = d.id,
+                existingReview = myReview,
+                onDismiss = { showReviewSheet = false },
+                // Dismiss first, then reload so the new review + aggregates show.
+                onComplete = { result ->
+                    showReviewSheet = false
+                    submittedReview = result
+                    viewModel.load()
+                }
+            )
         }
     }
 }
@@ -177,7 +220,12 @@ private fun BottomCtaBar(
 }
 
 @Composable
-private fun DetailContent(detail: ListingDetail) {
+private fun DetailContent(
+    detail: ListingDetail,
+    canReview: Boolean,
+    hasMyReview: Boolean,
+    onWriteReview: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -266,14 +314,25 @@ private fun DetailContent(detail: ListingDetail) {
             Spacer(Modifier.height(20.dp))
 
             // Reviews
+            SectionHeader(if (detail.recentReviews.isNotEmpty()) "Recent reviews" else "Reviews")
+
+            if (canReview) {
+                OutlinedButton(
+                    onClick = onWriteReview,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(if (hasMyReview) "Edit your review" else "Write a review")
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+
             if (detail.recentReviews.isNotEmpty()) {
-                SectionHeader("Recent reviews")
                 detail.recentReviews.forEach { review ->
                     ReviewCard(review)
                     Spacer(Modifier.height(8.dp))
                 }
             } else {
-                SectionHeader("Reviews")
                 Text(
                     "No reviews yet.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

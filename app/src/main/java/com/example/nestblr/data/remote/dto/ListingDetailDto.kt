@@ -65,6 +65,7 @@ data class AmenityDto(
 @Serializable
 data class ReviewDto(
     val id: String,
+    val userId: String? = null,
     val userName: String? = null,
     val rating: Int,
     val comment: String? = null,

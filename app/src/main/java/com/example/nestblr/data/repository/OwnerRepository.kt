@@ -3,6 +3,8 @@ package com.example.nestblr.data.repository
 import com.example.nestblr.data.remote.NestBlrApi
 import com.example.nestblr.data.remote.dto.CreateListingRequest
 import com.example.nestblr.data.remote.dto.OwnerListingDto
+import com.example.nestblr.data.remote.dto.RoomOptionDto
+import com.example.nestblr.data.remote.dto.UpdateRoomAvailabilityRequest
 import com.example.nestblr.domain.model.Photo
 import com.example.nestblr.domain.model.toDomain
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -43,6 +45,14 @@ class OwnerRepository @Inject constructor(
     suspend fun deletePhoto(listingId: String, photoId: String): Result<Unit> = runCatching {
         api.deletePhoto(listingId, photoId)
         Unit
+    }
+
+    suspend fun updateRoomAvailability(
+        listingId: String,
+        roomId: String,
+        availableBeds: Int
+    ): Result<RoomOptionDto> = runCatching {
+        api.updateRoomAvailability(listingId, roomId, UpdateRoomAvailabilityRequest(availableBeds)).data
     }
 
     /** Reuses the public detail endpoint — backend already returns photos there. */

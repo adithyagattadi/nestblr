@@ -8,12 +8,15 @@ import com.example.nestblr.data.remote.dto.ListingSummaryDto
 import com.example.nestblr.data.remote.dto.OwnerListingDto
 import com.example.nestblr.data.remote.dto.PhotoDto
 import com.example.nestblr.data.remote.dto.RegisterRequest
+import com.example.nestblr.data.remote.dto.RoomOptionDto
+import com.example.nestblr.data.remote.dto.UpdateRoomAvailabilityRequest
 import com.example.nestblr.data.remote.dto.UserDto
 import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Multipart
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Part
@@ -81,4 +84,11 @@ interface NestBlrApi {
         @Path("listingId") listingId: String,
         @Path("photoId") photoId: String
     ): ApiResponse<Map<String, String>>
+
+    @PATCH("api/v1/owner/listings/{listingId}/rooms/{roomId}")
+    suspend fun updateRoomAvailability(
+        @Path("listingId") listingId: String,
+        @Path("roomId") roomId: String,
+        @Body body: UpdateRoomAvailabilityRequest
+    ): ApiResponse<RoomOptionDto>
 }

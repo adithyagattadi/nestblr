@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Image
@@ -34,6 +35,7 @@ fun OwnerHomeScreen(
     val state by viewModel.state.collectAsState()
     var pendingDelete by remember { mutableStateOf<OwnerListingDto?>(null) }
     var sheetFor by remember { mutableStateOf<OwnerListingDto?>(null) }
+    var availabilityFor by remember { mutableStateOf<OwnerListingDto?>(null) }
 
     // Reload when this screen re-enters the foreground (e.g. after creating a listing)
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -132,6 +134,10 @@ fun OwnerHomeScreen(
     sheetFor?.let { listing ->
         ModalBottomSheet(onDismissRequest = { sheetFor = null }) {
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+                SheetRow(Icons.Outlined.Bed, "Update availability") {
+                    sheetFor = null
+                    availabilityFor = listing
+                }
                 SheetRow(Icons.Outlined.Edit, "Edit details") {
                     sheetFor = null
                     onEditListing(listing.id)
@@ -150,6 +156,15 @@ fun OwnerHomeScreen(
                 }
             }
         }
+    }
+
+    // Quick-edit availability sheet (opened from the action menu)
+    availabilityFor?.let { listing ->
+        AvailabilitySheet(
+            listingId = listing.id,
+            onDismiss = { availabilityFor = null },
+            onSaved = { viewModel.load() }
+        )
     }
 
     // Delete confirmation

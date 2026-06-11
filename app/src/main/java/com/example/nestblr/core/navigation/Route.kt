@@ -18,6 +18,9 @@ sealed interface Route {
     data class Detail(val listingId: String) : Route
 
     @Serializable
+    data object Favorites : Route
+
+    @Serializable
     data object OwnerHome : Route
 
     @Serializable

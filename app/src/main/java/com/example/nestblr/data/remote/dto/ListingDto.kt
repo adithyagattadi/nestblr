@@ -31,5 +31,6 @@ data class ListingSummaryDto(
     val reviewCount: Int,
     val minRent: Int? = null,
     val coverPhotoUrl: String? = null,
-    val distanceMeters: Double
+    val distanceMeters: Double? = null,
+    val isFavorite: Boolean = false
 )

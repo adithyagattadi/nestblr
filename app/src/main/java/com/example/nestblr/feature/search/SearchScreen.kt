@@ -8,17 +8,20 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.HomeWork
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -26,6 +29,8 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -40,6 +45,7 @@ import com.example.nestblr.domain.model.PgType
 @Composable
 fun SearchScreen(
     onListingClick: (String) -> Unit,
+    onFavoritesClick: () -> Unit,
     onSignOut: () -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
@@ -48,7 +54,30 @@ fun SearchScreen(
     var showMap by remember { mutableStateOf(false) }
     var showLocalityPicker by remember { mutableStateOf(false) }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(state.favoriteError) {
+        state.favoriteError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearFavoriteError()
+        }
+    }
+
+    // Reload on resume so a favorite toggled from the detail screen is reflected
+    // here when the user returns. load() keeps the existing list visible (the
+    // full-screen spinner only shows when listings is empty).
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.load()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -95,6 +124,9 @@ fun SearchScreen(
                         IconButton(onClick = { showFilters = true }) {
                             Icon(Icons.Default.Tune, contentDescription = "Filters")
                         }
+                    }
+                    IconButton(onClick = onFavoritesClick) {
+                        Icon(Icons.Outlined.FavoriteBorder, contentDescription = "Favorites")
                     }
                     IconButton(onClick = onSignOut) {
                         Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Sign out")
@@ -201,7 +233,8 @@ fun SearchScreen(
                             items(state.listings, key = { it.id }) { listing ->
                                 ListingCard(
                                     listing = listing,
-                                    onClick = { onListingClick(listing.id) }
+                                    onClick = { onListingClick(listing.id) },
+                                    onToggleFavorite = viewModel::toggleFavorite
                                 )
                             }
                         }
@@ -294,10 +327,45 @@ private fun DismissibleChip(label: String, onDismiss: () -> Unit) {
     )
 }
 
+/**
+ * Heart overlay for the card cover. Sits on a translucent dark scrim so a white
+ * outline (not-favorited) reads on light photos and the coral fill reads on dark
+ * ones. The IconButton consumes its own tap, so it does not trigger the card click.
+ */
 @Composable
-private fun ListingCard(
+private fun FavoriteHeart(
+    isFavorite: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.32f))
+    ) {
+        IconButton(onClick = onClick, modifier = Modifier.fillMaxSize()) {
+            Icon(
+                imageVector = if (isFavorite) Icons.Filled.Favorite
+                              else Icons.Outlined.FavoriteBorder,
+                contentDescription = if (isFavorite) "Remove from favorites"
+                                     else "Add to favorites",
+                tint = if (isFavorite) MaterialTheme.colorScheme.primary else Color.White,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Shared listing card — used by both search and favorites. [onToggleFavorite]
+ * receives (listingId, currentlyFavorite) and is invoked by the heart overlay.
+ */
+@Composable
+internal fun ListingCard(
     listing: ListingSummary,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onToggleFavorite: (listingId: String, currentlyFavorite: Boolean) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -309,31 +377,37 @@ private fun ListingCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Column {
-            // Edge-to-edge photo
-            if (listing.coverPhotoUrl != null) {
-                AsyncImage(
-                    model = resolveBackendUrl(listing.coverPhotoUrl),
-                    contentDescription = listing.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.HomeWork,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(40.dp)
+            // Edge-to-edge photo with a heart overlay in the top-right corner.
+            Box(modifier = Modifier.fillMaxWidth().height(180.dp)) {
+                if (listing.coverPhotoUrl != null) {
+                    AsyncImage(
+                        model = resolveBackendUrl(listing.coverPhotoUrl),
+                        contentDescription = listing.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.HomeWork,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
                 }
+                FavoriteHeart(
+                    isFavorite = listing.isFavorite,
+                    onClick = { onToggleFavorite(listing.id, listing.isFavorite) },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                )
             }
 
             Column(modifier = Modifier.padding(14.dp)) {
@@ -375,8 +449,11 @@ private fun ListingCard(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.width(3.dp))
+                    val distanceText = listing.distanceKm?.let { "${"%.1f".format(it)} km away" }
+                    val supportingLine =
+                        listOfNotNull(listing.locality, distanceText).joinToString(" · ")
                     Text(
-                        text = "${listing.locality} · ${"%.1f".format(listing.distanceKm)} km away",
+                        text = supportingLine,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

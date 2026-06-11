@@ -3,6 +3,7 @@ package com.example.nestblr.data.remote
 import com.example.nestblr.data.remote.dto.ApiResponse
 import com.example.nestblr.data.remote.dto.CreateListingRequest
 import com.example.nestblr.data.remote.dto.CreatedIdDto
+import com.example.nestblr.data.remote.dto.FavoriteDto
 import com.example.nestblr.data.remote.dto.ListingDetailDto
 import com.example.nestblr.data.remote.dto.ListingSummaryDto
 import com.example.nestblr.data.remote.dto.OwnerListingDto
@@ -91,4 +92,14 @@ interface NestBlrApi {
         @Path("roomId") roomId: String,
         @Body body: UpdateRoomAvailabilityRequest
     ): ApiResponse<RoomOptionDto>
+
+    // ── Favorites endpoints ──
+    @POST("api/v1/me/favorites/{listingId}")
+    suspend fun addFavorite(@Path("listingId") listingId: String): ApiResponse<FavoriteDto>
+
+    @DELETE("api/v1/me/favorites/{listingId}")
+    suspend fun removeFavorite(@Path("listingId") listingId: String): ApiResponse<Map<String, String>>
+
+    @GET("api/v1/me/favorites")
+    suspend fun getFavorites(): ApiResponse<List<ListingSummaryDto>>
 }

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.example.nestblr.core.navigation.Route
+import com.example.nestblr.data.repository.FavoritesRepository
 import com.example.nestblr.data.repository.ListingRepository
 import com.example.nestblr.domain.model.ListingDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,13 +19,16 @@ import javax.inject.Inject
 data class DetailUiState(
     val isLoading: Boolean = true,
     val detail: ListingDetail? = null,
-    val error: String? = null
+    val error: String? = null,
+    // Transient favorite-toggle failure — shown as a snackbar, not the error screen.
+    val favoriteError: String? = null
 )
 
 @HiltViewModel
 class DetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val repo: ListingRepository
+    private val repo: ListingRepository,
+    private val favoritesRepo: FavoritesRepository
 ) : ViewModel() {
 
     // Extract listing ID from the navigation route — type-safe
@@ -51,5 +55,30 @@ class DetailViewModel @Inject constructor(
                 }
             )
         }
+    }
+
+    /** Toggle favorite for the loaded listing; flip isFavorite on success. */
+    fun toggleFavorite() {
+        val current = _state.value.detail ?: return
+        viewModelScope.launch {
+            val result = if (current.isFavorite) favoritesRepo.remove(current.id)
+                         else favoritesRepo.add(current.id)
+            result.fold(
+                onSuccess = {
+                    _state.update { s ->
+                        s.copy(detail = s.detail?.copy(isFavorite = !current.isFavorite))
+                    }
+                },
+                onFailure = { e ->
+                    _state.update {
+                        it.copy(favoriteError = e.message ?: "Couldn't update favorite")
+                    }
+                }
+            )
+        }
+    }
+
+    fun clearFavoriteError() {
+        _state.update { it.copy(favoriteError = null) }
     }
 }

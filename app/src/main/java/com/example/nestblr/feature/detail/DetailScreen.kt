@@ -14,13 +14,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,14 +51,37 @@ fun DetailScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(state.favoriteError) {
+        state.favoriteError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearFavoriteError()
+        }
+    }
+
     val context = LocalContext.current
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(state.detail?.title ?: "Loading…", maxLines = 1) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    state.detail?.let { d ->
+                        IconButton(onClick = viewModel::toggleFavorite) {
+                            Icon(
+                                imageVector = if (d.isFavorite) Icons.Filled.Favorite
+                                              else Icons.Outlined.FavoriteBorder,
+                                contentDescription = if (d.isFavorite) "Remove from favorites"
+                                                     else "Add to favorites",
+                                tint = if (d.isFavorite) MaterialTheme.colorScheme.primary
+                                       else LocalContentColor.current
+                            )
+                        }
                     }
                 }
             )

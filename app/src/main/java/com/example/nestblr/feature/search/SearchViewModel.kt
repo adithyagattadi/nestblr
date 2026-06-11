@@ -3,6 +3,7 @@ package com.example.nestblr.feature.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nestblr.core.model.Locality
+import com.example.nestblr.data.repository.FavoritesRepository
 import com.example.nestblr.data.repository.ListingRepository
 import com.example.nestblr.domain.model.ListingSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,12 +24,16 @@ data class SearchUiState(
     val centerLat: Double = selectedLocality.lat,
     val centerLng: Double = selectedLocality.lng,
     val radiusKm: Double = 5.0,
-    val filters: FilterState = FilterState()
+    val filters: FilterState = FilterState(),
+    // Transient one-off message (favorite toggle failure) — shown as a snackbar,
+    // never the full-screen error state.
+    val favoriteError: String? = null
 )
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
-    private val repo: ListingRepository
+    private val repo: ListingRepository,
+    private val favoritesRepo: FavoritesRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SearchUiState())
@@ -104,6 +109,39 @@ class SearchViewModel @Inject constructor(
             )
         }
         load()
+    }
+
+    /**
+     * Toggle favorite for one listing. Sequential (not optimistic): call the API,
+     * then flip isFavorite on the matching row so the heart re-renders without a
+     * full search round-trip. Failures surface as a transient snackbar.
+     */
+    fun toggleFavorite(listingId: String, currentlyFavorite: Boolean) {
+        viewModelScope.launch {
+            val result = if (currentlyFavorite) favoritesRepo.remove(listingId)
+                         else favoritesRepo.add(listingId)
+            result.fold(
+                onSuccess = {
+                    _state.update { s ->
+                        s.copy(
+                            listings = s.listings.map {
+                                if (it.id == listingId) it.copy(isFavorite = !currentlyFavorite)
+                                else it
+                            }
+                        )
+                    }
+                },
+                onFailure = { e ->
+                    _state.update {
+                        it.copy(favoriteError = e.message ?: "Couldn't update favorite")
+                    }
+                }
+            )
+        }
+    }
+
+    fun clearFavoriteError() {
+        _state.update { it.copy(favoriteError = null) }
     }
 
     fun applyFilters(filters: FilterState) {

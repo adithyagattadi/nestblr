@@ -20,6 +20,7 @@ data class ListingDetailDto(
     val avgRating: Double,
     val reviewCount: Int,
     val status: String,
+    val isFavorite: Boolean = false,
     val owner: OwnerDto,
     val roomOptions: List<RoomOptionDto> = emptyList(),
     val photos: List<PhotoDto> = emptyList(),

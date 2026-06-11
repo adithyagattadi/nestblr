@@ -20,7 +20,8 @@ data class ListingSummary(
     val reviewCount: Int,
     val minRent: Int?,
     val coverPhotoUrl: String?,
-    val distanceKm: Double
+    val distanceKm: Double?,
+    val isFavorite: Boolean = false
 )
 
 enum class Gender { MALE, FEMALE, COED, UNKNOWN;
@@ -55,5 +56,6 @@ fun ListingSummaryDto.toDomain() = ListingSummary(
     reviewCount = reviewCount,
     minRent = minRent,
     coverPhotoUrl = coverPhotoUrl,
-    distanceKm = distanceMeters / 1000.0
+    distanceKm = distanceMeters?.let { it / 1000.0 },
+    isFavorite = isFavorite
 )

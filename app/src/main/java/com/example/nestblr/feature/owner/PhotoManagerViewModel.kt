@@ -129,6 +129,30 @@ class PhotoManagerViewModel @Inject constructor(
         }
     }
 
+    /** Promote a photo to cover. Reuses isUploading for the transient busy state;
+     *  on success the returned list is already ordered with the cover at index 0. */
+    fun setCoverPhoto(photoId: String) {
+        if (_state.value.isUploading) return
+        viewModelScope.launch {
+            _state.update { it.copy(isUploading = true, uploadError = null) }
+            repo.setCoverPhoto(listingId, photoId).fold(
+                onSuccess = { photos ->
+                    _state.update {
+                        it.copy(
+                            isUploading = false,
+                            photos = photos.sortedBy { p -> p.displayOrder }
+                        )
+                    }
+                },
+                onFailure = { e ->
+                    _state.update {
+                        it.copy(isUploading = false, uploadError = "Couldn't set cover: ${e.message}")
+                    }
+                }
+            )
+        }
+    }
+
     fun deletePhoto(photoId: String) {
         viewModelScope.launch {
             repo.deletePhoto(listingId, photoId).fold(

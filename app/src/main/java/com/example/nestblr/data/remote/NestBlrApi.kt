@@ -88,6 +88,12 @@ interface NestBlrApi {
         @Path("photoId") photoId: String
     ): ApiResponse<Map<String, String>>
 
+    @POST("api/v1/owner/listings/{listingId}/photos/{photoId}/cover")
+    suspend fun setCoverPhoto(
+        @Path("listingId") listingId: String,
+        @Path("photoId") photoId: String
+    ): ApiResponse<List<PhotoDto>>
+
     @PATCH("api/v1/owner/listings/{listingId}/rooms/{roomId}")
     suspend fun updateRoomAvailability(
         @Path("listingId") listingId: String,

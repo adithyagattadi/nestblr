@@ -9,7 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -25,7 +26,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
@@ -111,7 +114,8 @@ fun ManagePhotosScreen(
                     isUploading = state.isUploading,
                     uploadError = state.uploadError,
                     onAdd = onAdd,
-                    onDelete = { pendingDelete = it }
+                    onDelete = { pendingDelete = it },
+                    onSetCover = { viewModel.setCoverPhoto(it.id) }
                 )
             }
         }
@@ -158,7 +162,8 @@ private fun PhotosGrid(
     isUploading: Boolean,
     uploadError: String?,
     onAdd: () -> Unit,
-    onDelete: (Photo) -> Unit
+    onDelete: (Photo) -> Unit,
+    onSetCover: (Photo) -> Unit
 ) {
     val atLimit = photos.size >= 6
 
@@ -170,8 +175,16 @@ private fun PhotosGrid(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.weight(1f)
         ) {
-            items(photos, key = { it.id }) { photo ->
-                PhotoCell(photo = photo, onDelete = { onDelete(photo) })
+            // Cover is the photo at index 0 (display_order 0). Stable keys (photo.id)
+            // let the grid diff cleanly when the order changes — no flicker.
+            itemsIndexed(photos, key = { _, photo -> photo.id }) { index, photo ->
+                PhotoCell(
+                    photo = photo,
+                    isCover = index == 0,
+                    coverActionsEnabled = !isUploading,
+                    onDelete = { onDelete(photo) },
+                    onSetCover = { onSetCover(photo) }
+                )
             }
         }
 
@@ -232,7 +245,10 @@ private fun PhotosGrid(
 @Composable
 private fun PhotoCell(
     photo: Photo,
-    onDelete: () -> Unit
+    isCover: Boolean,
+    coverActionsEnabled: Boolean,
+    onDelete: () -> Unit,
+    onSetCover: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -246,6 +262,27 @@ private fun PhotoCell(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
+
+        // Top-left: COVER badge (informational) on the current cover; otherwise nothing.
+        if (isCover) {
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(6.dp)
+            ) {
+                Text(
+                    "COVER",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+
+        // Top-right: delete (existing).
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -264,6 +301,32 @@ private fun PhotoCell(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp)
                 )
+            }
+        }
+
+        // Bottom-left: "set as cover" star on non-cover photos. White on a subtle dark
+        // scrim so it reads against light or dark photos.
+        if (!isCover) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(6.dp)
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.35f))
+            ) {
+                IconButton(
+                    onClick = onSetCover,
+                    enabled = coverActionsEnabled,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        Icons.Outlined.StarBorder,
+                        contentDescription = "Set as cover photo",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
     }

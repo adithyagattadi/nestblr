@@ -60,6 +60,11 @@ class OwnerRepository @Inject constructor(
         api.getListingById(listingId).data.photos.map { it.toDomain() }
     }
 
+    /** Promotes a photo to cover (display_order 0); returns photos in new order. */
+    suspend fun setCoverPhoto(listingId: String, photoId: String): Result<List<Photo>> = runCatching {
+        api.setCoverPhoto(listingId, photoId).data.map { it.toDomain() }
+    }
+
     private fun guessImageMediaType(filename: String): String = when (
         filename.substringAfterLast('.', "").lowercase()
     ) {

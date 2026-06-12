@@ -1,5 +1,9 @@
 package com.example.nestblr.feature.search
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +23,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.HomeWork
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -32,10 +37,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 import com.example.nestblr.core.util.resolveBackendUrl
 import com.example.nestblr.domain.model.Gender
 import com.example.nestblr.domain.model.ListingSummary
@@ -55,10 +63,45 @@ fun SearchScreen(
     var showLocalityPicker by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
     LaunchedEffect(state.favoriteError) {
         state.favoriteError?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearFavoriteError()
+        }
+    }
+    LaunchedEffect(state.locationError) {
+        state.locationError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearLocationError()
+        }
+    }
+
+    // Permission flow lives in the UI, not the ViewModel. We re-check the grant
+    // on every FAB tap rather than caching it — the user can revoke it in Settings.
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            viewModel.useCurrentLocation()
+        } else {
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(
+                    "Location permission denied. Enable it in app settings to use your location."
+                )
+            }
+        }
+    }
+    val onLocationFabTapped: () -> Unit = {
+        val granted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            viewModel.useCurrentLocation()
+        } else {
+            permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
         }
     }
 
@@ -92,7 +135,7 @@ fun SearchScreen(
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "PGs near ${state.selectedLocality.displayName}",
+                                "PGs near ${state.locationName}",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -176,13 +219,39 @@ fun SearchScreen(
                     // In map mode the map always renders — even with zero results it
                     // recenters to the picked locality (markers just empty out).
                     showMap -> {
-                        NestBlrMap(
-                            centerLat = state.centerLat,
-                            centerLng = state.centerLng,
-                            listings = state.listings,
-                            onMarkerClick = onListingClick,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            NestBlrMap(
+                                centerLat = state.centerLat,
+                                centerLng = state.centerLng,
+                                listings = state.listings,
+                                onMarkerClick = onListingClick,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            // "Use my location" FAB — surface container + primary
+                            // content reads against OSM Mapnik's light tiles; the
+                            // FAB's own elevation/shadow separates it from the map.
+                            SmallFloatingActionButton(
+                                onClick = onLocationFabTapped,
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(16.dp),
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.primary
+                            ) {
+                                if (state.isFetchingLocation) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.MyLocation,
+                                        contentDescription = "Use my location"
+                                    )
+                                }
+                            }
+                        }
                     }
                     state.listings.isEmpty() -> {
                         EmptyState(
@@ -223,7 +292,7 @@ fun SearchScreen(
                                     )
                                     Spacer(Modifier.height(2.dp))
                                     Text(
-                                        "${state.listings.size} options around ${state.selectedLocality.displayName}",
+                                        "${state.listings.size} options around ${state.locationName}",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -263,7 +332,8 @@ fun SearchScreen(
         // Locality picker sheet
         if (showLocalityPicker) {
             LocalityPickerSheet(
-                selected = state.selectedLocality,
+                // No row highlighted while centered on the user's location.
+                selected = if (state.isUsingCurrentLocation) null else state.selectedLocality,
                 onDismiss = { showLocalityPicker = false },
                 onLocalitySelected = { locality ->
                     viewModel.onLocalityChanged(locality)

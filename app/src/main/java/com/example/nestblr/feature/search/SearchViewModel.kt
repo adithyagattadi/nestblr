@@ -2,6 +2,7 @@ package com.example.nestblr.feature.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.nestblr.core.location.LocationService
 import com.example.nestblr.core.model.Locality
 import com.example.nestblr.data.repository.FavoritesRepository
 import com.example.nestblr.data.repository.ListingRepository
@@ -19,10 +20,20 @@ data class SearchUiState(
     val isRefreshing: Boolean = false,
     val listings: List<ListingSummary> = emptyList(),
     val error: String? = null,
-    // Single source of truth for the map/list center: the picked locality.
-    val selectedLocality: Locality = Locality.KORAMANGALA,
-    val centerLat: Double = selectedLocality.lat,
-    val centerLng: Double = selectedLocality.lng,
+    // The picked locality, or null when centering on the user's current location.
+    val selectedLocality: Locality? = Locality.KORAMANGALA,
+    // True while centered on the device location rather than a locality.
+    val isUsingCurrentLocation: Boolean = false,
+    // FAB spinner: a one-shot location fetch is in flight.
+    val isFetchingLocation: Boolean = false,
+    // Transient location-fetch failure — shown as a snackbar.
+    val locationError: String? = null,
+    // Map/list center. Derives from selectedLocality, or from the device fix
+    // when isUsingCurrentLocation.
+    val centerLat: Double = Locality.KORAMANGALA.lat,
+    val centerLng: Double = Locality.KORAMANGALA.lng,
+    // Header display name: a locality name, or "you" for the current location.
+    val locationName: String = Locality.KORAMANGALA.displayName,
     val radiusKm: Double = 5.0,
     val filters: FilterState = FilterState(),
     // Transient one-off message (favorite toggle failure) — shown as a snackbar,
@@ -33,7 +44,8 @@ data class SearchUiState(
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val repo: ListingRepository,
-    private val favoritesRepo: FavoritesRepository
+    private val favoritesRepo: FavoritesRepository,
+    private val locationService: LocationService
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SearchUiState())
@@ -95,11 +107,14 @@ class SearchViewModel @Inject constructor(
         )
     }
 
-    /** Tenant picked a locality — recenter and reload both list and map. */
+    /** Tenant picked a locality — recenter and reload both list and map.
+     *  Also clears any current-location state so the picker reflects the locality. */
     fun onLocalityChanged(locality: Locality) {
         _state.update {
             it.copy(
                 selectedLocality = locality,
+                isUsingCurrentLocation = false,
+                locationName = locality.displayName,
                 centerLat = locality.lat,
                 centerLng = locality.lng,
                 // Drop stale results so the area transitions through a clean
@@ -109,6 +124,43 @@ class SearchViewModel @Inject constructor(
             )
         }
         load()
+    }
+
+    /**
+     * Center the search on the device's current location. The caller (UI) must
+     * have already obtained ACCESS_COARSE_LOCATION. A null fix (timeout/failure)
+     * surfaces as a transient [locationError]; the existing locality stays put.
+     */
+    fun useCurrentLocation() {
+        viewModelScope.launch {
+            _state.update { it.copy(isFetchingLocation = true, locationError = null) }
+            val coords = locationService.getCurrentLocation()
+            if (coords == null) {
+                _state.update {
+                    it.copy(
+                        isFetchingLocation = false,
+                        locationError = "Couldn't get your location. Try again."
+                    )
+                }
+                return@launch
+            }
+            _state.update {
+                it.copy(
+                    isFetchingLocation = false,
+                    isUsingCurrentLocation = true,
+                    selectedLocality = null,
+                    centerLat = coords.first,
+                    centerLng = coords.second,
+                    locationName = "you"
+                )
+            }
+            // Reuse the standard search runner with the new center.
+            load()
+        }
+    }
+
+    fun clearLocationError() {
+        _state.update { it.copy(locationError = null) }
     }
 
     /**

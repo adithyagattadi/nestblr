@@ -9,8 +9,8 @@
     <!-- Production should use HTTPS only; we relax this for local dev -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Location — for "find PGs near me" feature -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Location — for "find PGs near me". Coarse only: PG search needs only
+         city-block accuracy, paired with PRIORITY_BALANCED_POWER_ACCURACY. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!-- Required by osmdroid for tile caching on older Android (no-op on API 29+). -->

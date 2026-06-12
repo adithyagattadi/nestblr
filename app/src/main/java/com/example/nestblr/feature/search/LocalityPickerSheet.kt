@@ -31,7 +31,7 @@ import com.example.nestblr.core.model.Locality
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocalityPickerSheet(
-    selected: Locality,
+    selected: Locality?,
     onDismiss: () -> Unit,
     onLocalitySelected: (Locality) -> Unit
 ) {

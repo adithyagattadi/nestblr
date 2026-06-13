@@ -7,6 +7,7 @@ import androidx.navigation.toRoute
 import com.example.nestblr.core.navigation.Route
 import com.example.nestblr.data.remote.NestBlrApi
 import com.example.nestblr.data.repository.FavoritesRepository
+import com.example.nestblr.data.repository.InquiriesRepository
 import com.example.nestblr.data.repository.ListingRepository
 import com.example.nestblr.domain.model.ListingDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,6 +36,7 @@ class DetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repo: ListingRepository,
     private val favoritesRepo: FavoritesRepository,
+    private val inquiriesRepo: InquiriesRepository,
     private val api: NestBlrApi
 ) : ViewModel() {
 
@@ -104,5 +106,16 @@ class DetailViewModel @Inject constructor(
 
     fun clearFavoriteError() {
         _state.update { it.copy(favoriteError = null) }
+    }
+
+    /** Best-effort inquiry log fired when a tenant taps "Call owner". Skips the
+     *  network call for owners (reuses the same isTenant gate as the review button);
+     *  failures are swallowed so the dialer always opens. */
+    fun logInquiry() {
+        val listingId = _state.value.detail?.id ?: return
+        if (!_state.value.isTenant) return
+        viewModelScope.launch {
+            inquiriesRepo.logInquiry(listingId)
+        }
     }
 }

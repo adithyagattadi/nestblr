@@ -24,6 +24,9 @@ sealed interface Route {
     data object OwnerHome : Route
 
     @Serializable
+    data object Inquiries : Route
+
+    @Serializable
     data object CreateListing : Route
 
     @Serializable

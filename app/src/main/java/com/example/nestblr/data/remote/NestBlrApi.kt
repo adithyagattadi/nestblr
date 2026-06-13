@@ -5,6 +5,8 @@ import com.example.nestblr.data.remote.dto.CreateListingRequest
 import com.example.nestblr.data.remote.dto.CreateReviewRequest
 import com.example.nestblr.data.remote.dto.CreatedIdDto
 import com.example.nestblr.data.remote.dto.FavoriteDto
+import com.example.nestblr.data.remote.dto.InquiryDto
+import com.example.nestblr.data.remote.dto.InquirySummaryDto
 import com.example.nestblr.data.remote.dto.ListingDetailDto
 import com.example.nestblr.data.remote.dto.ReviewDto
 import com.example.nestblr.data.remote.dto.ListingSummaryDto
@@ -122,4 +124,13 @@ interface NestBlrApi {
     suspend fun deleteMyReview(
         @Path("listingId") listingId: String
     ): ApiResponse<Map<String, String?>>
+
+    // ── Inquiries ──
+    @POST("api/v1/listings/{listingId}/inquiries")
+    suspend fun logInquiry(
+        @Path("listingId") listingId: String
+    ): ApiResponse<InquiryDto>
+
+    @GET("api/v1/owner/inquiries/summary")
+    suspend fun getInquirySummary(): ApiResponse<List<InquirySummaryDto>>
 }

@@ -114,6 +114,9 @@ fun DetailScreen(
                     minRent = d.roomOptions.minOfOrNull { it.monthlyRent },
                     phone = d.owner.phone,
                     onCall = {
+                        // Fire-and-forget inquiry log (async, returns immediately),
+                        // then open the dialer — never block the call on the log.
+                        viewModel.logInquiry()
                         val intent = Intent(Intent.ACTION_DIAL, "tel:${d.owner.phone}".toUri())
                         context.startActivity(intent)
                     }

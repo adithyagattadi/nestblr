@@ -12,6 +12,7 @@ import com.example.nestblr.feature.auth.RoleGateScreen
 import com.example.nestblr.feature.detail.DetailScreen
 import com.example.nestblr.feature.favorites.FavoritesScreen
 import com.example.nestblr.feature.owner.CreateListingScreen
+import com.example.nestblr.feature.owner.InquiriesScreen
 import com.example.nestblr.feature.owner.ManagePhotosScreen
 import com.example.nestblr.feature.owner.OwnerHomeScreen
 import com.example.nestblr.feature.search.SearchScreen
@@ -91,6 +92,7 @@ fun NestBlrNavHost(
                 onManagePhotos = { listingId ->
                     navController.navigate(Route.ManageListingPhotos(listingId))
                 },
+                onInquiriesClick = { navController.navigate(Route.Inquiries) },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Route.Auth) {
@@ -98,6 +100,10 @@ fun NestBlrNavHost(
                     }
                 }
             )
+        }
+
+        composable<Route.Inquiries> {
+            InquiriesScreen(onBack = { navController.popBackStack() })
         }
 
         composable<Route.CreateListing> {

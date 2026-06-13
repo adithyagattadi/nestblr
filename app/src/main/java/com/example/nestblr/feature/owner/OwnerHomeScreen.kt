@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Bed
+import androidx.compose.material.icons.outlined.ContactPhone
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Image
@@ -34,6 +35,7 @@ fun OwnerHomeScreen(
     onCreateListing: () -> Unit,
     onEditListing: (String) -> Unit,
     onManagePhotos: (String) -> Unit,
+    onInquiriesClick: () -> Unit,
     onSignOut: () -> Unit,
     viewModel: OwnerHomeViewModel = hiltViewModel()
 ) {
@@ -59,6 +61,9 @@ fun OwnerHomeScreen(
             TopAppBar(
                 title = { Text("My Listings") },
                 actions = {
+                    IconButton(onClick = onInquiriesClick) {
+                        Icon(Icons.Outlined.ContactPhone, contentDescription = "Inquiries")
+                    }
                     IconButton(onClick = onSignOut) {
                         Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Sign out")
                     }

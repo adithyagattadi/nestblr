@@ -56,7 +56,7 @@ fun LocalityPickerSheet(
             )
             Spacer(Modifier.height(8.dp))
 
-            Locality.entries.forEach { locality ->
+            Locality.entries.sortedBy { it.displayName.lowercase() }.forEach { locality ->
                 val isSelected = locality == selected
                 Row(
                     modifier = Modifier

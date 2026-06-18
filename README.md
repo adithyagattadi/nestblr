@@ -8,11 +8,7 @@ Android client; the Ktor backend lives in a separate repo (linked below).
 
 ## Screenshots
 
-Coming soon — capture and place in `docs/screenshots/`.
 
-| Search (list) | Search (map) | Detail | Owner home | Manage photos |
-| --- | --- | --- | --- | --- |
-| ![Search list](docs/screenshots/02-search-list.png) | ![Search map](docs/screenshots/03-search-map.png) | ![Detail](docs/screenshots/05-detail.png) | ![Owner home](docs/screenshots/09-owner-home.png) | ![Manage photos](docs/screenshots/11-manage-photos.png) |
 
 ## Features
 
@@ -54,7 +50,7 @@ can take the listing/room id they operate on as a runtime parameter.
 
 ## Running locally
 
-1. The backend must be running first — see `adithyagattadi/nestblr-backend` (replace with the real URL).
+1. The backend must be running first — see [adithyagattadi/nestblr-backend](https://github.com/adithyagattadi/nestblr-backend).
 2. Place `google-services.json` at `app/`.
 3. Build and install: `./gradlew :app:installDebug`
 
@@ -92,4 +88,4 @@ ProGuard rules, local-filesystem photo storage, and more. See [KNOWN_LIMITATIONS
 
 ## Related repo
 
-Backend: `adithyagattadi/nestblr-backend` (replace with the real URL).
+Backend: [adithyagattadi/nestblr-backend](https://github.com/adithyagattadi/nestblr-backend).

@@ -29,6 +29,16 @@ class AuthRepository @Inject constructor(
         Unit
     }
 
+    /**
+     * Sends a Firebase password-reset email. Firebase returns success even when
+     * the email isn't registered (intentional, prevents account enumeration), so
+     * callers must not branch on whether the address exists.
+     */
+    suspend fun sendPasswordReset(email: String): Result<Unit> = runCatching {
+        firebaseAuth.sendPasswordResetEmail(email).await()
+        Unit
+    }
+
     fun signOut() {
         firebaseAuth.signOut()
     }

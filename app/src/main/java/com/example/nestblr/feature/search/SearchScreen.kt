@@ -225,6 +225,7 @@ fun SearchScreen(
                                 centerLng = state.centerLng,
                                 listings = state.listings,
                                 onMarkerClick = onListingClick,
+                                showUserLocation = state.isUsingCurrentLocation,
                                 modifier = Modifier.fillMaxSize()
                             )
                             // "Use my location" FAB — surface container + primary

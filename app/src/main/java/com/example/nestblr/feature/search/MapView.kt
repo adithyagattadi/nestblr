@@ -1,5 +1,11 @@
 package com.example.nestblr.feature.search
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +35,7 @@ fun NestBlrMap(
     centerLng: Double,
     listings: List<ListingSummary>,
     onMarkerClick: (String) -> Unit,
+    showUserLocation: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -90,7 +97,50 @@ fun NestBlrMap(
                 }
                 mv.overlays.add(marker)
             }
+
+            // "You are here" dot — added LAST so it draws on top of listing
+            // markers. The removeAll above also clears this each cycle, so it
+            // never stacks. Anchored center-center and non-tappable.
+            if (showUserLocation) {
+                val userMarker = Marker(mv).apply {
+                    position = GeoPoint(centerLat, centerLng)
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                    icon = createUserLocationDrawable(context)
+                    title = null
+                    setOnMarkerClickListener { _, _ -> false }
+                }
+                mv.overlays.add(userMarker)
+            }
             mv.invalidate()
         }
     )
+}
+
+/**
+ * A static "you are here" marker icon, drawn programmatically (no XML/PNG):
+ * a coral filled dot inside a white ring for contrast against any tile color.
+ */
+private fun createUserLocationDrawable(context: Context): Drawable {
+    val sizeDp = 18 // overall diameter in dp
+    val sizePx = (sizeDp * context.resources.displayMetrics.density).toInt()
+    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val cx = sizePx / 2f
+    val cy = sizePx / 2f
+
+    // White outer ring
+    val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.WHITE
+        style = Paint.Style.FILL
+    }
+    canvas.drawCircle(cx, cy, sizePx / 2f, ringPaint)
+
+    // Coral inner dot (Rose600 / #E11D48)
+    val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.parseColor("#E11D48")
+        style = Paint.Style.FILL
+    }
+    canvas.drawCircle(cx, cy, sizePx / 2f * 0.7f, dotPaint)
+
+    return BitmapDrawable(context.resources, bitmap)
 }

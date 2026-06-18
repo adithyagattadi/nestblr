@@ -7,6 +7,9 @@ sealed interface Route {
     @Serializable
     data object Auth : Route
 
+    @Serializable
+    data object ForgotPassword : Route
+
     /** Post-login gate that fetches role and redirects to Search or OwnerHome. */
     @Serializable
     data object RoleGate : Route

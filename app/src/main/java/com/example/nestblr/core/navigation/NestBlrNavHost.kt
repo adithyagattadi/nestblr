@@ -8,6 +8,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.example.nestblr.feature.auth.AuthScreen
 import com.example.nestblr.feature.auth.AuthViewModel
+import com.example.nestblr.feature.auth.ForgotPasswordScreen
 import com.example.nestblr.feature.auth.RoleGateScreen
 import com.example.nestblr.feature.detail.DetailScreen
 import com.example.nestblr.feature.favorites.FavoritesScreen
@@ -33,8 +34,13 @@ fun NestBlrNavHost(
                     navController.navigate(Route.RoleGate) {
                         popUpTo(Route.Auth) { inclusive = true }
                     }
-                }
+                },
+                onForgotPasswordClick = { navController.navigate(Route.ForgotPassword) }
             )
+        }
+
+        composable<Route.ForgotPassword> {
+            ForgotPasswordScreen(onBack = { navController.popBackStack() })
         }
 
         // Post-login gate: fetch role, route accordingly

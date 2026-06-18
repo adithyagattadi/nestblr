@@ -11,9 +11,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.Period
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 enum class AuthMode { LOGIN, SIGNUP }
+
+enum class Gender(val display: String, val backendValue: String) {
+    Male("Male", "MALE"),
+    Female("Female", "FEMALE"),
+    Other("Other", "OTHER"),
+    PreferNotToSay("Prefer not to say", "PREFER_NOT_TO_SAY")
+}
 
 data class AuthUiState(
     val mode: AuthMode = AuthMode.LOGIN,
@@ -22,7 +32,22 @@ data class AuthUiState(
     val role: String = "TENANT",        // chosen at signup
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isAuthenticated: Boolean = false
+    val isAuthenticated: Boolean = false,
+
+    // Signup-only fields
+    val fullName: String = "",
+    val phone: String = "",
+    val confirmPassword: String = "",
+    val dob: LocalDate? = null,
+    val gender: Gender = Gender.PreferNotToSay,
+
+    // Per-field validation errors (null = no error)
+    val fullNameError: String? = null,
+    val phoneError: String? = null,
+    val emailError: String? = null,
+    val passwordError: String? = null,
+    val confirmPasswordError: String? = null,
+    val dobError: String? = null
 )
 
 @HiltViewModel
@@ -36,9 +61,17 @@ class AuthViewModel @Inject constructor(
     )
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
 
-    fun onEmailChange(v: String) = _state.update { it.copy(email = v, error = null) }
-    fun onPasswordChange(v: String) = _state.update { it.copy(password = v, error = null) }
+    fun onEmailChange(v: String) = _state.update { it.copy(email = v, error = null, emailError = null) }
+    fun onPasswordChange(v: String) = _state.update { it.copy(password = v, error = null, passwordError = null) }
     fun onRoleChange(v: String) = _state.update { it.copy(role = v) }
+
+    fun onFullNameChange(v: String) = _state.update { it.copy(fullName = v, fullNameError = null) }
+    fun onPhoneChange(v: String) = _state.update { it.copy(phone = v, phoneError = null) }
+    fun onConfirmPasswordChange(v: String) =
+        _state.update { it.copy(confirmPassword = v, confirmPasswordError = null) }
+    fun onDobChange(v: LocalDate) = _state.update { it.copy(dob = v, dobError = null) }
+    fun onGenderChange(v: Gender) = _state.update { it.copy(gender = v) }
+
     fun toggleMode() = _state.update {
         it.copy(
             mode = if (it.mode == AuthMode.LOGIN) AuthMode.SIGNUP else AuthMode.LOGIN,
@@ -46,11 +79,69 @@ class AuthViewModel @Inject constructor(
         )
     }
 
+    /**
+     * Validates all signup fields, mirroring the backend's checks so the user gets
+     * immediate feedback. Sets per-field error strings and returns true iff all pass.
+     */
+    fun validateSignup(): Boolean {
+        val errors = mutableMapOf<String, String>()
+        val s = _state.value
+
+        if (s.fullName.trim().isBlank()) {
+            errors["fullName"] = "Please enter your name"
+        }
+
+        if (!s.phone.matches(Regex("^(\\+91)?[6-9]\\d{9}$"))) {
+            errors["phone"] = "Enter a valid 10-digit Indian mobile number"
+        }
+
+        if (!s.email.contains("@") || !s.email.contains(".")) {
+            errors["email"] = "Enter a valid email address"
+        }
+
+        val pwd = s.password
+        if (pwd.length < 8 || !pwd.any { it.isLetter() } || !pwd.any { it.isDigit() }) {
+            errors["password"] = "Password must be at least 8 characters with a letter and a digit"
+        }
+
+        if (s.confirmPassword != s.password) {
+            errors["confirmPassword"] = "Passwords don't match"
+        }
+
+        val dob = s.dob
+        if (dob == null) {
+            errors["dob"] = "Please select your date of birth"
+        } else {
+            val age = Period.between(dob, LocalDate.now()).years
+            if (age < 18) errors["dob"] = "You must be 18 or older"
+        }
+
+        // Gender has a default, so it never fails validation.
+
+        _state.update {
+            it.copy(
+                fullNameError = errors["fullName"],
+                phoneError = errors["phone"],
+                emailError = errors["email"],
+                passwordError = errors["password"],
+                confirmPasswordError = errors["confirmPassword"],
+                dobError = errors["dob"]
+            )
+        }
+
+        return errors.isEmpty()
+    }
+
     fun submit() {
         val s = _state.value
-        if (s.email.isBlank() || s.password.length < 6) {
-            _state.update { it.copy(error = "Enter a valid email and 6+ char password") }
-            return
+
+        if (s.mode == AuthMode.SIGNUP) {
+            if (!validateSignup()) return
+        } else {
+            if (s.email.isBlank() || s.password.length < 6) {
+                _state.update { it.copy(error = "Enter a valid email and 6+ char password") }
+                return
+            }
         }
 
         viewModelScope.launch {
@@ -64,22 +155,28 @@ class AuthViewModel @Inject constructor(
 
             authResult.fold(
                 onSuccess = {
-                    // On signup, register the user in our backend with their role.
+                    // On signup, register the user in our backend with their details.
                     // On login, ensure they're registered (idempotent).
                     val reg = runCatching {
                         api.register(
-                            RegisterRequest(
-                                role = if (s.mode == AuthMode.SIGNUP) s.role else "TENANT",
-                                fullName = null,
-                                phone = null
-                            )
+                            if (s.mode == AuthMode.SIGNUP) {
+                                RegisterRequest(
+                                    role = s.role,
+                                    fullName = s.fullName.trim(),
+                                    phone = s.phone,
+                                    gender = s.gender.backendValue,
+                                    dob = s.dob?.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                                )
+                            } else {
+                                RegisterRequest(role = "TENANT")
+                            }
                         )
                     }
                     reg.fold(
                         onSuccess = {
                             _state.update { it.copy(isLoading = false, isAuthenticated = true) }
                         },
-                        onFailure = { e ->
+                        onFailure = {
                             // Auth succeeded but backend registration failed.
                             // Still let them in — backend /me will retry registration flow.
                             _state.update {

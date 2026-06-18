@@ -6,7 +6,9 @@ import kotlinx.serialization.Serializable
 data class RegisterRequest(
     val role: String,
     val fullName: String? = null,
-    val phone: String? = null
+    val phone: String? = null,
+    val gender: String? = null,   // "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY"
+    val dob: String? = null       // ISO "YYYY-MM-DD"
 )
 
 @Serializable

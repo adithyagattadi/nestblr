@@ -20,3 +20,29 @@ A frank list of what's deferred or wouldn't hold up in production.
 - Phone is the only owner contact — there's no in-app messaging.
 - No reorder for non-cover photos. Set-as-cover swaps `display_order`, but there's no full
   drag-to-reorder.
+
+### Auth & profile
+
+- **No Google sign-in.** Requires Firebase Google OAuth setup, SHA-1 keystore
+  fingerprint registration, and federated sign-in UI. Deferred.
+- **No OTP verification.** Firebase doesn't natively support email OTP (it uses
+  email links instead). Phone OTP requires enabling Firebase Phone Authentication,
+  SHA-1 fingerprints, and SMS-capable testing devices. ~1-2 days of work plus
+  rate-limited free tier. Deferred.
+- **Login is email + password only.** No "login with phone" — depends on phone OTP.
+- **No profile editing after signup.** Name, phone, gender, and DOB are captured
+  at signup but can't be edited later.
+- **Phone numbers stored as-entered.** Signup accepts both `+919876543210` and
+  `9876543210` and stores whichever format the user typed. A user could in
+  principle sign up twice with the same physical number in different formats.
+  Fix: normalize at the DB boundary before insert.
+
+### Communications
+
+- **Password reset emails land in spam.** Firebase's email template can't be
+  customized on this project's plan, and new Firebase projects have low sender
+  reputation by default. The forgot-password screen mentions checking the spam
+  folder.
+- **No transactional email beyond password reset.** No welcome email, no email
+  verification (Firebase supports it but isn't wired up), no inquiry-confirmation
+  emails.

@@ -16,5 +16,6 @@ enum class Locality(val displayName: String, val lat: Double, val lng: Double) {
     BELLANDUR("Bellandur", 12.9259, 77.6649),
     ELECTRONIC_CITY("Electronic City", 12.8452, 77.6602),
     JP_NAGAR("JP Nagar", 12.9077, 77.5853),
+    RAJAJINAGAR("Rajajinagar", 12.9866, 77.5520),
     SARJAPUR("Sarjapur Road", 12.9010, 77.6870)
 }

@@ -6,6 +6,11 @@ puts tenants in front of owner-managed listings they can search, filter, map, an
 and gives owners the tools to list, photograph, and keep their rooms up to date. This repo is the
 Android client; the Ktor backend lives in a separate repo (linked below).
 
+## 🚀 Live
+
+The app now points at production: **[nestblr-backend.onrender.com](https://nestblr-backend.onrender.com)**.
+That means a fresh install works from any network — WiFi, mobile data, hotspot, anywhere. No LAN setup required.
+
 ## Screenshots
 
 
@@ -50,12 +55,16 @@ can take the listing/room id they operate on as a runtime parameter.
 
 ## Running locally
 
-1. The backend must be running first — see [adithyagattadi/nestblr-backend](https://github.com/adithyagattadi/nestblr-backend).
-2. Place `google-services.json` at `app/`.
-3. Build and install: `./gradlew :app:installDebug`
+1. Place `google-services.json` at `app/`.
+2. Build and install: `./gradlew :app:installDebug`
 
-Emulator note: `BASE_URL` is `http://10.0.2.2:8080/` — that's the emulator's loopback to the host
-Mac, where the backend runs.
+The `BASE_URL` in `app/build.gradle.kts` points at the deployed backend (`https://nestblr-backend.onrender.com/`). No local backend needed.
+
+To point at a local backend for development (e.g. testing schema changes), edit `BASE_URL`:
+- Emulator → host loopback: `http://10.0.2.2:8080/`
+- Physical device on same WiFi as Mac: `http://<mac-lan-ip>:8080/`
+
+If pointing at a plain-HTTP local backend, you'll also need to re-add `android:usesCleartextTraffic="true"` in `AndroidManifest.xml`. Removed in production since Render provides HTTPS.
 
 ## What I Learned
 
@@ -83,8 +92,8 @@ verify before fixing.
 
 ## What's not built
 
-A fair amount is deferred or wouldn't survive production scrutiny — no deployment, no tests, no
-ProGuard rules, local-filesystem photo storage, and more. See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md).
+A fair amount is deferred or wouldn't survive production scrutiny — no tests, no ProGuard rules, no
+crash reporting, no CI, and more. See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md).
 
 ## Related repo
 

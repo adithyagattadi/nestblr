@@ -24,7 +24,7 @@ android {
         // Emulator → host machine: 192.168.1.7 is the Android emulator's alias for your Mac's localhost
         // Physical device on same WiFi: use your Mac's LAN IP (e.g. http://192.168.1.x:8080/)
         // Production: change to your deployed backend URL
-        buildConfigField("String", "BASE_URL", "\"http://192.168.1.7:8080/\"")
+        buildConfigField("String", "BASE_URL", "\"https://nestblr-backend.onrender.com/\"")
     }
 
     buildTypes {
